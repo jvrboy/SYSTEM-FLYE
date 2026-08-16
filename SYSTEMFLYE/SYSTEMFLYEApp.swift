@@ -4,6 +4,7 @@ import SwiftUI
 struct SYSTEMFLYEApp: App {
     @StateObject private var marketDataManager = MarketDataManager()
     @StateObject private var signalGenerator = SignalGenerator()
+    @StateObject private var advancedStore = AdvancedStore()
     @State private var mode: FlyeMode = .intelligence
 
     var body: some Scene {
@@ -11,6 +12,7 @@ struct SYSTEMFLYEApp: App {
             FlyeRootView(mode: $mode)
                 .environmentObject(marketDataManager)
                 .environmentObject(signalGenerator)
+                .environmentObject(advancedStore)
                 .preferredColorScheme(.dark)
         }
     }
@@ -43,15 +45,7 @@ struct FlyeRootView: View {
 
                 Group {
                     if mode == .intelligence {
-                        TabView(selection: $selectedMarketTab) {
-                            DashboardView().tag(0)
-                            AnalysisView().tag(1)
-                            SignalsView().tag(2)
-                            PortfolioView().tag(3)
-                            SettingsView().tag(4)
-                        }
-                        .tabViewStyle(.page(indexDisplayMode: .never))
-                        marketTabs
+                        AdvancedDashboardView()
                     } else {
                         SoundLabView()
                     }
