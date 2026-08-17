@@ -11,13 +11,20 @@ class GranularSynthesizer: NSObject, AVAudioPlayerDelegate {
     
     // MARK: - Granular Parameters
     struct GranularParameters {
-        var grainSize: Float = 100 // ms
+        var grainSize: Float = 100 // milliseconds
         var density: Float = 10 // grains per second
         var pitchShift: Float = 0 // semitones
         var timeStretch: Float = 1.0 // speed multiplier
-        var overlap: Float = 0.5 // grain overlap
+        var overlap: Float = 0.5 // 0...1
+        var positionJitter: Float = 0 // 0...1
+        var grainSizeJitter: Float = 0 // 0...1
+        var reverseProbability: Float = 0 // 0...1
+        var panSpread: Float = 0 // 0...1
+        var gain: Float = 0.85
+        var filterCutoff: Float = 18000
+        var filterResonance: Float = 0.1
         var windowType: WindowType = .hann
-        var spreadWidth: Float = 0 // stereo spread
+        var envelope: CustomEnvelope = .neutral
         var modulation: ModulationSettings = ModulationSettings()
     }
     
@@ -71,7 +78,15 @@ class GranularSynthesizer: NSObject, AVAudioPlayerDelegate {
             pitchShift: parameters.pitchShift,
             timeStretch: parameters.timeStretch,
             overlap: parameters.overlap,
+            positionJitter: parameters.positionJitter,
+            grainSizeJitter: parameters.grainSizeJitter,
+            reverseProbability: parameters.reverseProbability,
+            panSpread: parameters.panSpread,
+            gain: parameters.gain,
+            filterCutoff: parameters.filterCutoff,
+            filterResonance: parameters.filterResonance,
             windowType: parameters.windowType,
+            envelope: parameters.envelope,
             modulation: parameters.modulation
         )
     }
@@ -82,11 +97,12 @@ class GranularSynthesizer: NSObject, AVAudioPlayerDelegate {
         
         let frameLength = Int(buffer.frameLength)
         let sampleRate = Float(buffer.format.sampleRate)
-        
-        var phase: Float = 0
-        let phaseIncrement = 2 * .pi * shiftHz / sampleRate
+        guard frameLength > 0, sampleRate > 0 else { return buffer }
+        let safeShift = min(sampleRate * 0.49, max(-sampleRate * 0.49, shiftHz))
+        let phaseIncrement = 2 * .pi * safeShift / sampleRate
         
         for channelIndex in 0..<Int(buffer.format.channelCount) {
+            var phase: Float = 0
             let channel = floatChannelData[channelIndex]
             
             for i in 0..<frameLength {
@@ -113,7 +129,7 @@ class GranularSynthesizer: NSObject, AVAudioPlayerDelegate {
             let channel = floatChannelData[channelIndex]
             
             for freq in formantFrequencies {
-                let shiftedFreq = freq * formantShift
+                let shiftedFreq = min(Float(buffer.format.sampleRate) * 0.45, max(20, freq * formantShift))
                 // Simple 2nd-order filter implementation
                 applyBiquadFilter(
                     channel: channel,
@@ -132,6 +148,7 @@ class GranularSynthesizer: NSObject, AVAudioPlayerDelegate {
         guard let floatChannelData = buffer.floatChannelData else { return nil }
         
         let frameLength = Int(buffer.frameLength)
+        guard frameLength > 0 else { return buffer }
         
         for channelIndex in 0..<Int(buffer.format.channelCount) {
             let channel = floatChannelData[channelIndex]
@@ -203,60 +220,87 @@ class GranularProcessor {
         pitchShift: Float,
         timeStretch: Float,
         overlap: Float,
+        positionJitter: Float,
+        grainSizeJitter: Float,
+        reverseProbability: Float,
+        panSpread: Float,
+        gain: Float,
+        filterCutoff: Float,
+        filterResonance: Float,
         windowType: GranularSynthesizer.WindowType,
+        envelope: CustomEnvelope,
         modulation: GranularSynthesizer.ModulationSettings
     ) -> AVAudioPCMBuffer? {
         guard let floatChannelData = buffer.floatChannelData else { return nil }
-        
         let frameLength = Int(buffer.frameLength)
-        let grainLengthSamples = Int((grainSize / 1000.0) * sampleRate)
-        let grainHopSize = Int(Float(grainLengthSamples) / (1.0 + overlap))
-        
-        // Create output buffer
-        guard let outputBuffer = AVAudioPCMBuffer(
-            pcmFormat: buffer.format,
-            frameCapacity: AVAudioFrameCount(frameLength)
-        ) else { return nil }
-        
-        let outputData = outputBuffer.floatChannelData
-        outputBuffer.frameLength = buffer.frameLength
-        
-        // Generate window function
-        let window = generateWindow(size: grainLengthSamples, type: windowType)
-        
-        // Process grains
-        var grainPosition: Int = 0
-        var outputPosition: Int = 0
+        let channelCount = Int(buffer.format.channelCount)
+        guard frameLength > 0, channelCount > 0 else { return nil }
+        let safeGrainSize = min(2000, max(5, grainSize))
+        let baseGrainSamples = max(8, Int((safeGrainSize / 1000) * sampleRate))
+        let safeDensity = min(200, max(0.25, density))
+        let overlapFactor = min(0.95, max(0, overlap))
+        let hopFromDensity = Int(sampleRate / safeDensity)
+        let grainHop = max(1, min(frameLength, Int(Float(baseGrainSamples) * (1 - overlapFactor)), hopFromDensity))
+        let pitchRatio = min(8, max(0.125, exp2(pitchShift / 12)))
+        let stretch = min(8, max(0.125, timeStretch))
+
+        guard let outputBuffer = AVAudioPCMBuffer(pcmFormat: buffer.format, frameCapacity: AVAudioFrameCount(frameLength)), let outputData = outputBuffer.floatChannelData else { return nil }
+        outputBuffer.frameLength = AVAudioFrameCount(frameLength)
+        for channel in 0..<channelCount { outputData[channel].initialize(repeating: 0, count: frameLength) }
+
+        var grainPosition = 0
+        var outputPosition = 0
         var lfoPhase: Float = 0
-        let lfoIncrement = 2 * Float.pi * modulation.lfoRate / sampleRate
-        
-        while grainPosition < frameLength - grainLengthSamples {
-            for channelIndex in 0..<Int(buffer.format.channelCount) {
-                let inputChannel = floatChannelData[channelIndex]
-                let outputChannel = outputData![channelIndex]
-                
-                // Calculate pitch-shifted grain
-                let pitchRatio = exp2(pitchShift / 12.0)
-                
-                for grainSample in 0..<grainLengthSamples {
-                    let inputIndex = Int(Float(grainSample) * pitchRatio)
-                    if inputIndex < frameLength && outputPosition < frameLength {
-                        let lfoValue = sin(lfoPhase) * modulation.lfoDepth
-                        let modifiedSample = inputChannel[grainPosition + inputIndex]
-                        let windowedSample = modifiedSample * window[grainSample]
-                        let modulated = windowedSample * (1.0 + lfoValue)
-                        
-                        outputChannel[outputPosition] += modulated
-                    }
+        var rng: UInt64 = 0x9E3779B97F4A7C15
+        let lfoIncrement = 2 * Float.pi * min(40, max(0, modulation.lfoRate)) / sampleRate
+        let safeGain = min(2, max(0, gain))
+
+        while grainPosition < frameLength && outputPosition < frameLength {
+            rng = rng &* 2862933555777941757 &+ 3037000493
+            let unit = Float(rng % 10_000) / 10_000
+            let sizeJitter = 1 + (unit - 0.5) * 2 * min(0.9, max(0, grainSizeJitter))
+            let grainSamples = max(8, Int(Float(baseGrainSamples) * sizeJitter))
+            let window = generateWindow(size: grainSamples, type: windowType)
+            let shouldReverse = Float(rng % 10_000) / 10_000 < min(1, max(0, reverseProbability))
+            let positionOffset = Int((unit - 0.5) * 2 * Float(baseGrainSamples) * min(1, max(0, positionJitter)))
+            let sourceStart = min(max(0, grainPosition + positionOffset), max(0, frameLength - 1))
+
+            for sampleIndex in 0..<grainSamples {
+                let normalized = Float(sampleIndex) / Float(max(1, grainSamples - 1))
+                let envelopeValue = envelope.value(at: Double(normalized))
+                let sourceProgress = shouldReverse ? (1 - normalized) : normalized
+                let sourceIndex = sourceStart + Int(sourceProgress * Float(grainSamples) * pitchRatio * stretch)
+                guard sourceIndex >= 0, sourceIndex < frameLength else { continue }
+                let lfoValue = 1 + sin(lfoPhase) * min(1, max(0, modulation.lfoDepth))
+                let sampleGain = window[sampleIndex] * envelopeValue * lfoValue * safeGain
+                let destination = outputPosition + sampleIndex
+                guard destination < frameLength else { continue }
+                for channel in 0..<channelCount {
+                    let pan = channelCount > 1 ? 1 + (Float(channel) / Float(channelCount - 1) - 0.5) * 2 * min(1, max(0, panSpread)) : 1
+                    outputData[channel][destination] += floatChannelData[channel][sourceIndex] * sampleGain * pan
                 }
-                
                 lfoPhase += lfoIncrement
             }
-            
-            grainPosition += grainHopSize
-            outputPosition += grainHopSize
+            grainPosition += grainHop
+            outputPosition += max(1, Int(Float(grainHop) * stretch))
         }
-        
+
+        let cutoff = min(sampleRate * 0.49, max(20, filterCutoff))
+        if cutoff < sampleRate * 0.48 {
+            let alpha = exp(-2 * Float.pi * cutoff / sampleRate)
+            for channel in 0..<channelCount {
+                var previous: Float = 0
+                for index in 0..<frameLength {
+                    previous = (1 - alpha) * outputData[channel][index] + alpha * previous
+                    outputData[channel][index] = previous
+                }
+            }
+        }
+
+        var peak: Float = 0
+        for channel in 0..<channelCount { for index in 0..<frameLength { peak = max(peak, abs(outputData[channel][index])) } }
+        if peak > 0.98 { let scale = 0.98 / peak; for channel in 0..<channelCount { vDSP_vsmul(outputData[channel], 1, [scale], outputData[channel], 1, vDSP_Length(frameLength)) } }
+        _ = filterResonance
         return outputBuffer
     }
     

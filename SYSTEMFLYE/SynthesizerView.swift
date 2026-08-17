@@ -1,10 +1,12 @@
 import SwiftUI
 import AVFoundation
+import UniformTypeIdentifiers
 
 struct SynthesizerView: View {
     @StateObject private var playerManager = AudioPlayerManager.shared
     @StateObject private var synthesizer = SynthesizerViewModel()
     @State private var showWaveformPicker = false
+    @State private var showFileImporter = false
     
     var body: some View {
         ZStack {
@@ -35,6 +37,14 @@ struct SynthesizerView: View {
                                 )
                         )
                     
+                    HStack(spacing: 8) {
+                        Image(systemName: synthesizer.status.contains("failed") ? "xmark.octagon.fill" : "checkmark.circle.fill")
+                            .foregroundStyle(synthesizer.status.contains("failed") ? .red : .green)
+                        Text(synthesizer.status).font(.caption).foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 4)
+
                     // Granular Parameters
                     VStack(spacing: 16) {
                         ParameterSlider(
@@ -78,6 +88,12 @@ struct SynthesizerView: View {
                             range: 0...1.0,
                             unit: ""
                         )
+
+                        ParameterSlider(label: "Position Jitter", value: $synthesizer.positionJitter, range: 0...1, unit: "")
+                        ParameterSlider(label: "Grain Size Jitter", value: $synthesizer.grainSizeJitter, range: 0...1, unit: "")
+                        ParameterSlider(label: "Reverse Probability", value: $synthesizer.reverseProbability, range: 0...1, unit: "")
+                        ParameterSlider(label: "Output Gain", value: $synthesizer.gain, range: 0...1.5, unit: "×")
+                        ParameterSlider(label: "Filter Cutoff", value: $synthesizer.filterCutoff, range: 100...20000, unit: "Hz")
                     }
                     .padding(16)
                     .background(
@@ -157,9 +173,11 @@ struct SynthesizerView: View {
                             .fill(Color(red: 0.12, green: 0.12, blue: 0.18))
                     )
                     
+                    EnvelopeEditorView(points: $synthesizer.envelopePoints)
+
                     // Playback Controls
                     HStack(spacing: 12) {
-                        Button(action: { synthesizer.loadAudioFile() }) {
+                        Button(action: { showFileImporter = true }) {
                             Label("Load Audio", systemImage: "arrow.down.doc")
                                 .frame(maxWidth: .infinity)
                                 .padding(12)
@@ -189,6 +207,9 @@ struct SynthesizerView: View {
                     }
                 }
                 .padding(16)
+            }
+            .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.audio], allowsMultipleSelection: false) { result in
+                if case .success(let urls) = result, let url = urls.first { synthesizer.loadAudioFile(from: url) }
             }
         }
     }
@@ -227,6 +248,12 @@ class SynthesizerViewModel: ObservableObject {
     @Published var timeStretch: Float = 1.0
     @Published var overlap: Float = 0.5
     @Published var spreadWidth: Float = 0
+    @Published var positionJitter: Float = 0
+    @Published var grainSizeJitter: Float = 0
+    @Published var reverseProbability: Float = 0
+    @Published var gain: Float = 0.85
+    @Published var filterCutoff: Float = 18000
+    @Published var envelopePoints: [EnvelopePoint] = CustomEnvelope.neutral.points
     @Published var lfoRate: Float = 5
     @Published var lfoDepth: Float = 0
     @Published var lfoType: String = "sine"
@@ -234,12 +261,36 @@ class SynthesizerViewModel: ObservableObject {
     
     private var currentAudioBuffer: AVAudioPCMBuffer?
     
-    func loadAudioFile() {
-        // File picker implementation
+    func loadAudioFile(from url: URL) {
+        let accessed = url.startAccessingSecurityScopedResource()
+        defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+        do {
+            let file = try AVAudioFile(forReading: url)
+            guard let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length)) else { return }
+            try file.read(into: buffer)
+            currentAudioBuffer = buffer
+            status = "Loaded \(url.lastPathComponent)"
+        } catch {
+            status = "Load failed: \(error.localizedDescription)"
+        }
     }
-    
+
     func playProcessed() {
-        // Process and play audio
+        guard let currentAudioBuffer else { status = "Load an audio file first"; return }
+        let parameters = GranularSynthesizer.GranularParameters(grainSize: grainSize, density: density, pitchShift: pitchShift, timeStretch: timeStretch, overlap: overlap, positionJitter: positionJitter, grainSizeJitter: grainSizeJitter, reverseProbability: reverseProbability, panSpread: spreadWidth, gain: gain, filterCutoff: filterCutoff, filterResonance: 0.1, windowType: windowTypeValue, envelope: CustomEnvelope(name: "Custom", points: envelopePoints), modulation: GranularSynthesizer.ModulationSettings(lfoRate: lfoRate, lfoDepth: lfoDepth, lfoType: lfoTypeValue, envAttack: 10, envRelease: 100))
+        guard let processed = GranularSynthesizer.shared.processAudioWithGranularSynthesis(audioBuffer: currentAudioBuffer, parameters: parameters) else { status = "Processing failed"; return }
+        AudioPlayerManager.shared.play(audioBuffer: processed)
+        status = "Processed and playing"
+    }
+
+    @Published var status = "Load an audio file to begin"
+
+    private var windowTypeValue: GranularSynthesizer.WindowType {
+        switch windowType { case "hamming": return .hamming; case "blackman": return .blackman; case "triangle": return .triangle; default: return .hann }
+    }
+
+    private var lfoTypeValue: GranularSynthesizer.LFOType {
+        switch lfoType { case "triangle": return .triangle; case "saw": return .saw; case "square": return .square; default: return .sine }
     }
 }
 
