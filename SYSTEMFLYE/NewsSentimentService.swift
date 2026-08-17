@@ -86,7 +86,7 @@ final class NewsSentimentService: ObservableObject {
     }
 
     private static func score(text: String, pair: String) -> Double {
-        let tokens = Set(text.lowercased().split { !$0.isLetter }.map(String.init)
+        let tokens = Set(text.lowercased().split { !$0.isLetter }.map(String.init))
         let positive = Set(["gain", "gains", "growth", "strong", "strength", "rally", "rallies", "bullish", "optimism", "recovery", "improves", "improved", "beat", "surplus", "hawkish", "support"])
         let negative = Set(["loss", "losses", "weak", "weakness", "fall", "falls", "bearish", "risk", "recession", "decline", "declines", "miss", "deficit", "dovish", "crisis", "war"])
         let positiveScore = tokens.intersection(positive).count
