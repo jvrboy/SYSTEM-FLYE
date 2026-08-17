@@ -7,6 +7,8 @@ struct SYSTEMFLYEApp: App {
     @StateObject private var advancedStore = AdvancedStore()
     @StateObject private var analyticsEngine = AnalyticsEngine()
     @StateObject private var backendServiceManager = BackendServiceManager.shared
+    @StateObject private var operationalBackend = OperationalBackendStore.shared
+    @StateObject private var featurePlatform = FeaturePlatformStore.shared
     @StateObject private var productionStore = ProductionStore()
     @State private var mode: FlyeMode = .intelligence
 
@@ -18,8 +20,13 @@ struct SYSTEMFLYEApp: App {
                 .environmentObject(advancedStore)
                 .environmentObject(analyticsEngine)
                 .environmentObject(backendServiceManager)
+                .environmentObject(operationalBackend)
+                .environmentObject(featurePlatform)
                 .environmentObject(productionStore)
-                .task { await productionStore.restore() }
+                .task {
+                    operationalBackend.start()
+                    await productionStore.restore()
+                }
                 .preferredColorScheme(.dark)
         }
     }
@@ -113,5 +120,7 @@ enum FlyeTheme {
         .environmentObject(AdvancedStore())
         .environmentObject(AnalyticsEngine())
         .environmentObject(BackendServiceManager.shared)
+        .environmentObject(OperationalBackendStore.shared)
+        .environmentObject(FeaturePlatformStore.shared)
         .environmentObject(ProductionStore())
 }
