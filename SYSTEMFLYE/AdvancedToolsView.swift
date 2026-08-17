@@ -430,7 +430,7 @@ struct BackendToolsPanel: View {
                 ServiceHealthRow(service: service)
             }
         }
-        .task { circuitState = String(describing: await CircuitBreaker.shared.currentState()).uppercased() }
+        .task { circuitState = String(describing: await BackendCircuitBreaker.shared.currentState()).uppercased() }
     }
 }
 

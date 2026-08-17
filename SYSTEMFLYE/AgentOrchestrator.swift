@@ -275,13 +275,13 @@ public final class AgentOrchestrator: ObservableObject {
     @Published public private(set) var isRunning: Bool = false
     @Published public private(set) var strategy: LoadBalanceStrategy
 
-    public private(set) var circuitBreakers: [UUID: CircuitBreaker] = [:]
+    public private(set) var circuitBreakers: [UUID: AgentCircuitBreaker] = [:]
     public private(set) var roundRobinIndex: Int = 0
     public private(set) var taskHistory: [TaskDefinition] = []
     public private(set) var heartbeatTimers: [UUID: Timer] = [:]
     public private(set) var retryQueues: [UUID: [TaskDefinition]] = [:]
 
-    public private let failoverPolicy: FailoverPolicy
+    public private(set) var failoverPolicy: FailoverPolicy
     public private let healthCheckInterval: TimeInterval = 5
     public private let heartbeatTimeout: TimeInterval = 15
     public private var processingTask: Task<Void, Never>?
@@ -307,6 +307,153 @@ public final class AgentOrchestrator: ObservableObject {
         healthCheckTask?.cancel()
         heartbeatTimers.values.forEach { $0.invalidate() }
     }
+
+    /// Registers the default fleet of FLYE agents so the orchestrator has
+    /// working capacity out of the box. The five named platform agents
+    /// (ORBIT, MIXER, SENTINEL, CONDUCTOR, CARTOGRAPHER) plus the advanced
+    /// extension agents are seeded here.
+    private func setupDefaults() {
+        let defaults: [AgentDefinition] = [
+            AgentDefinition(
+                name: "ORBIT",
+                role: "Market reconnaissance and regime mapping",
+                capabilities: ["market.recon", "regime.detect", "correlation.map", "risk.check"],
+                status: .ready,
+                successRate: 0.94,
+                averageLatency: 0.42,
+                accentColor: "#00D4FF"
+            ),
+            AgentDefinition(
+                name: "MIXER",
+                role: "Generative sound design and scene building",
+                capabilities: ["audio.synth", "spectral.forge", "granular.cloud", "master.bus"],
+                status: .ready,
+                successRate: 0.88,
+                averageLatency: 0.61,
+                accentColor: "#A78BFA"
+            ),
+            AgentDefinition(
+                name: "SENTINEL",
+                role: "Portfolio risk and operational safety",
+                capabilities: ["risk.monitor", "exposure.audit", "drawdown.alert", "circuit.break"],
+                status: .paused,
+                successRate: 0.97,
+                averageLatency: 0.28,
+                accentColor: "#34D399"
+            ),
+            AgentDefinition(
+                name: "CONDUCTOR",
+                role: "Pipeline orchestration and quality gates",
+                capabilities: ["pipeline.orchestrate", "quality.gate", "stage.advance", "failover.handle"],
+                status: .ready,
+                successRate: 0.91,
+                averageLatency: 0.34,
+                accentColor: "#FBBF24"
+            ),
+            AgentDefinition(
+                name: "CARTOGRAPHER",
+                role: "Macro context and session intelligence",
+                capabilities: ["macro.calendar", "session.map", "event.scan", "context.bind"],
+                status: .ready,
+                successRate: 0.89,
+                averageLatency: 0.55,
+                accentColor: "#F472B6"
+            ),
+            AgentDefinition(
+                name: "ORACLE",
+                role: "News sentiment fusion and narrative radar",
+                capabilities: ["news.scan", "sentiment.fuse", "narrative.summarise", "event.impact"],
+                status: .ready,
+                successRate: 0.86,
+                averageLatency: 0.72,
+                accentColor: "#22D3EE"
+            ),
+            AgentDefinition(
+                name: "ATLAS",
+                role: "Cross-pair correlation and macro structure",
+                capabilities: ["correlation.matrix", "cross.pair", "structure.map", "regime.classify"],
+                status: .ready,
+                successRate: 0.92,
+                averageLatency: 0.49,
+                accentColor: "#60A5FA"
+            ),
+            AgentDefinition(
+                name: "NOVA",
+                role: "Neural training and model serving",
+                capabilities: ["neural.train", "model.serve", "forecast.generate", "ensemble.combine"],
+                status: .ready,
+                successRate: 0.84,
+                averageLatency: 0.95,
+                accentColor: "#F59E0B"
+            ),
+            AgentDefinition(
+                name: "HARBOR",
+                role: "Execution planning and slippage control",
+                capabilities: ["execution.plan", "slippage.model", "order.route", "fill.optimise"],
+                status: .ready,
+                successRate: 0.93,
+                averageLatency: 0.31,
+                accentColor: "#10B981"
+            ),
+            AgentDefinition(
+                name: "ZENITH",
+                role: "Portfolio optimisation and rebalancing",
+                capabilities: ["portfolio.optimise", "rebalance.schedule", "sharpe.maximise", "drawdown.min"],
+                status: .ready,
+                successRate: 0.90,
+                averageLatency: 0.58,
+                accentColor: "#8B5CF6"
+            ),
+            AgentDefinition(
+                name: "PULSE",
+                role: "Volatility surface and regime pulse",
+                capabilities: ["volatility.surface", "regime.pulse", "garch.forecast", "smile.fit"],
+                status: .ready,
+                successRate: 0.88,
+                averageLatency: 0.45,
+                accentColor: "#EF4444"
+            ),
+            AgentDefinition(
+                name: "VECTOR",
+                role: "Latent embedding and similarity search",
+                capabilities: ["vector.embed", "similarity.search", "cluster.label", "anomaly.score"],
+                status: .ready,
+                successRate: 0.87,
+                averageLatency: 0.68,
+                accentColor: "#3B82F6"
+            ),
+            AgentDefinition(
+                name: "MIRAGE",
+                role: "Counterfactual scenario generator",
+                capabilities: ["scenario.generate", "counterfactual.sim", "whatif.simulate", "path.monte"],
+                status: .ready,
+                successRate: 0.83,
+                averageLatency: 0.78,
+                accentColor: "#EC4899"
+            ),
+            AgentDefinition(
+                name: "SAGE",
+                role: "Expert rule system and policy advisor",
+                capabilities: ["rule.evaluate", "policy.advise", "constraint.check", "logic.fuzzy"],
+                status: .ready,
+                successRate: 0.95,
+                averageLatency: 0.22,
+                accentColor: "#14B8A6"
+            ),
+            AgentDefinition(
+                name: "BEACON",
+                role: "Anomaly radar and alert routing",
+                capabilities: ["anomaly.detect", "alert.route", "threshold.escalate", "incident.trace"],
+                status: .ready,
+                successRate: 0.91,
+                averageLatency: 0.39,
+                accentColor: "#F97316"
+            ),
+        ]
+        for agent in defaults {
+            registerAgent(agent)
+        }
+    }
 }
 
 // MARK: - Agent Management
@@ -316,7 +463,7 @@ extension AgentOrchestrator {
         agentLock.lock()
         defer { agentLock.unlock() }
         agents[agent.id] = agent
-        circuitBreakers[agent.id] = CircuitBreaker(
+        circuitBreakers[agent.id] = AgentCircuitBreaker(
             threshold: failoverPolicy.circuitBreakerThreshold,
             resetTime: failoverPolicy.circuitBreakerResetTime
         )
@@ -512,9 +659,10 @@ extension AgentOrchestrator {
     }
 
     private func selectBestCapabilityMatch(_ candidates: [AgentDefinition], task: TaskDefinition) -> AgentDefinition? {
-        candidates.max { agent in
-            let matchCount = Set(agent.capabilities).intersection(Set(task.requiredCapabilities)).count
-            return matchCount
+        candidates.max { lhs, rhs in
+            let lhsMatch = Set(lhs.capabilities).intersection(Set(task.requiredCapabilities)).count
+            let rhsMatch = Set(rhs.capabilities).intersection(Set(task.requiredCapabilities)).count
+            return lhsMatch < rhsMatch
         }
     }
 
@@ -863,7 +1011,7 @@ public struct SystemHealth: Sendable {
 
 // MARK: - Circuit Breaker
 
-public final class CircuitBreaker: Sendable {
+public final class AgentCircuitBreaker: Sendable {
     public private(set) var state: AgentHealthReport.CircuitBreakerState = .closed
     public private(set) var failureCount: Int = 0
     public private(set) var lastFailureTime: Date?
@@ -988,7 +1136,7 @@ extension AgentOrchestrator {
     public func updateFailoverPolicy(_ newPolicy: FailoverPolicy) {
         taskLock.lock()
         defer { taskLock.unlock() }
-        failoverPolicy.maxRetries = newPolicy.maxRetries
+        failoverPolicy = newPolicy
     }
 
     public func pauseAgent(_ id: UUID) {

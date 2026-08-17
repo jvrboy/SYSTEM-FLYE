@@ -33,7 +33,7 @@ class OANDAClient: ForexAPIProvider {
         var components = URLComponents(string: "\(baseURL)/v3/accounts/\(accountID)/pricing")
         components?.queryItems = [URLQueryItem(name: "instruments", value: pairString)]
         guard let url = components?.url else {
-            throw APIError.invalidURL
+            throw FlyeAPIError.invalidURL
         }
         
         var request = URLRequest(url: url)
@@ -43,7 +43,7 @@ class OANDAClient: ForexAPIProvider {
         let (data, httpResponse) = try await FlyeHTTPClient.shared.data(for: request)
         
         guard (200...299).contains(httpResponse.statusCode) else {
-            throw APIError.invalidResponse
+            throw FlyeAPIError.invalidResponse
         }
         
         let decoder = JSONDecoder()
@@ -66,7 +66,7 @@ class OANDAClient: ForexAPIProvider {
         var components = URLComponents(string: "\(baseURL)/v3/instruments/\(pair)/candles")
         components?.queryItems = [URLQueryItem(name: "granularity", value: timeframe), URLQueryItem(name: "count", value: String(limit))]
         guard let url = components?.url else {
-            throw APIError.invalidURL
+            throw FlyeAPIError.invalidURL
         }
         
         var request = URLRequest(url: url)
@@ -75,7 +75,7 @@ class OANDAClient: ForexAPIProvider {
         let (data, httpResponse) = try await FlyeHTTPClient.shared.data(for: request)
         
         guard (200...299).contains(httpResponse.statusCode) else {
-            throw APIError.invalidResponse
+            throw FlyeAPIError.invalidResponse
         }
         
         let decoder = JSONDecoder()
@@ -98,7 +98,7 @@ class OANDAClient: ForexAPIProvider {
     
     func getMarketStatus() async throws -> MarketStatus {
         guard let url = URL(string: "\(baseURL)/v3/accounts/\(accountID)") else {
-            throw APIError.invalidURL
+            throw FlyeAPIError.invalidURL
         }
         
         var request = URLRequest(url: url)
@@ -107,7 +107,7 @@ class OANDAClient: ForexAPIProvider {
         let (data, httpResponse) = try await FlyeHTTPClient.shared.data(for: request)
         
         guard (200...299).contains(httpResponse.statusCode) else {
-            throw APIError.invalidResponse
+            throw FlyeAPIError.invalidResponse
         }
         
         let decoder = JSONDecoder()
@@ -139,13 +139,13 @@ class TwelveDataClient: ForexAPIProvider {
         let endpoint = "\(baseURL)/quote?symbol=\(symbols)&apikey=\(apiKey)"
         
         guard let url = URL(string: endpoint) else {
-            throw APIError.invalidURL
+            throw FlyeAPIError.invalidURL
         }
         
         let (data, httpResponse) = try await FlyeHTTPClient.shared.data(for: URLRequest(url: url))
         
         guard (200...299).contains(httpResponse.statusCode) else {
-            throw APIError.invalidResponse
+            throw FlyeAPIError.invalidResponse
         }
         
         let decoder = JSONDecoder()
@@ -165,13 +165,13 @@ class TwelveDataClient: ForexAPIProvider {
         let endpoint = "\(baseURL)/time_series?symbol=\(pair)&interval=\(timeframe)&outputsize=\(limit)&apikey=\(apiKey)"
         
         guard let url = URL(string: endpoint) else {
-            throw APIError.invalidURL
+            throw FlyeAPIError.invalidURL
         }
         
         let (data, httpResponse) = try await FlyeHTTPClient.shared.data(for: URLRequest(url: url))
         
         guard (200...299).contains(httpResponse.statusCode) else {
-            throw APIError.invalidResponse
+            throw FlyeAPIError.invalidResponse
         }
         
         let decoder = JSONDecoder()
@@ -236,7 +236,7 @@ class TwelveDataClient: ForexAPIProvider {
 }
 
 // MARK: - API Error Types
-enum APIError: LocalizedError {
+enum FlyeAPIError: LocalizedError {
     case invalidURL
     case invalidResponse
     case decodingError
@@ -332,11 +332,11 @@ struct TwelveDataTimeSeriesResponse: Codable {
 
 // MARK: - API Client Manager
 @MainActor
-class APIClientManager: ObservableObject {
-    static let shared = APIClientManager()
+class FlyeAPIClientManager: ObservableObject {
+    static let shared = FlyeAPIClientManager()
     @Published var provider: ForexAPIProvider?
     @Published var fallbackProvider: ForexAPIProvider?
-    @Published var error: APIError?
+    @Published var error: FlyeAPIError?
     @Published var isConnected = false
     @Published private(set) var primaryProviderName = "Not configured"
     @Published private(set) var fallbackProviderName = "Not configured"
@@ -371,7 +371,7 @@ class APIClientManager: ObservableObject {
 
     func saveCredentials(provider type: ProviderType, apiKey: String, accountID: String = "", asFallback: Bool = false) throws {
         let prefix = credentialPrefix(type: type, fallback: asFallback)
-        if apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { throw APIError.authenticationError }
+        if apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { throw FlyeAPIError.authenticationError }
         try credentials.save(apiKey, for: "\(prefix).apiKey")
         if type == .oanda { try credentials.save(accountID, for: "\(prefix).accountID") }
         configure(with: type, apiKey: apiKey, accountID: accountID, asFallback: asFallback)
@@ -395,7 +395,7 @@ class APIClientManager: ObservableObject {
     }
 
     func fetchPricesWithFailover(for pairs: [String]) async throws -> [String: Double] {
-        guard let primary = provider else { throw APIError.authenticationError }
+        guard let primary = provider else { throw FlyeAPIError.authenticationError }
         do { let values = try await primary.fetchPrices(for: pairs); lastSuccessfulProvider = primaryProviderName; return values }
         catch {
             guard failoverEnabled, let fallback = fallbackProvider else { throw error }
@@ -407,7 +407,7 @@ class APIClientManager: ObservableObject {
     }
 
     func fetchHistoricalWithFailover(pair: String, timeframe: String, limit: Int) async throws -> [PriceData] {
-        guard let primary = provider else { throw APIError.authenticationError }
+        guard let primary = provider else { throw FlyeAPIError.authenticationError }
         do { let values = try await primary.fetchHistoricalData(pair: pair, timeframe: timeframe, limit: limit); lastSuccessfulProvider = primaryProviderName; return values }
         catch {
             guard failoverEnabled, let fallback = fallbackProvider else { throw error }
@@ -439,7 +439,7 @@ class APIClientManager: ObservableObject {
             let status = try await provider.getMarketStatus()
             isConnected = true
             error = nil
-        } catch let apiError as APIError {
+        } catch let apiError as FlyeAPIError {
             error = apiError
             isConnected = false
         } catch {

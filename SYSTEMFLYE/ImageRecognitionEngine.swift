@@ -5,7 +5,7 @@ import Accelerate
 import Vision
 
 // MARK: - Chart Pattern Models
-enum ChartPattern: String, Codable, CaseIterable {
+enum ImageChartPattern: String, Codable, CaseIterable {
     case headAndShoulders = "HEAD_AND_SHOULDERS"
     case doubleTop = "DOUBLE_TOP"
     case doubleBottom = "DOUBLE_BOTTOM"
@@ -29,9 +29,9 @@ enum ChartPattern: String, Codable, CaseIterable {
     case none = "NONE"
 }
 
-struct PatternDetectionResult: Codable, Identifiable {
+struct ImagePatternDetectionResult: Codable, Identifiable {
     let id = UUID()
-    var pattern: ChartPattern
+    var pattern: ImageChartPattern
     var confidence: Double
     var startIndex: Int
     var endIndex: Int
@@ -61,7 +61,7 @@ struct PatternDetectionResult: Codable, Identifiable {
         let direction: SignalType
     }
 
-    init(pattern: ChartPattern, confidence: Double, startIndex: Int, endIndex: Int, keyPoints: [CGPoint] = [], metrics: PatternMetrics = PatternMetrics(height: 0, width: 0, slope: 0, volumeConfirmation: 0, breakoutProbability: 0, falsePositiveRate: 0, symmetryScore: 0, volumeProfile: []), prediction: PatternPrediction = PatternPrediction(targetPrice: 0, stopLoss: 0, riskRewardRatio: 0, expectedReturn: 0, probability: 0, timeToTarget: 0, direction: .neutral), timestamp: Date = Date()) {
+    init(pattern: ImageChartPattern, confidence: Double, startIndex: Int, endIndex: Int, keyPoints: [CGPoint] = [], metrics: PatternMetrics = PatternMetrics(height: 0, width: 0, slope: 0, volumeConfirmation: 0, breakoutProbability: 0, falsePositiveRate: 0, symmetryScore: 0, volumeProfile: []), prediction: PatternPrediction = PatternPrediction(targetPrice: 0, stopLoss: 0, riskRewardRatio: 0, expectedReturn: 0, probability: 0, timeToTarget: 0, direction: .neutral), timestamp: Date = Date()) {
         self.id = UUID()
         self.pattern = pattern
         self.confidence = max(0, min(1, confidence))
@@ -170,18 +170,18 @@ struct ImageFeatures: Codable, Identifiable {
 @MainActor
 final class ImageRecognitionEngine: ObservableObject {
     static let shared = ImageRecognitionEngine()
-    @Published private(set) var detectedPatterns: [PatternDetectionResult] = []
+    @Published private(set) var detectedPatterns: [ImagePatternDetectionResult] = []
     @Published private(set) var candlestickPatterns: [CandlestickPatternResult] = []
     @Published private(set) var isProcessing = false
     private var cancellationToken: Task<Void, Never>?
     private let maxResults = 100
 
-    func detectChartPatterns(history: [PriceData], volumeHistory: [Int] = []) async -> [PatternDetectionResult] {
+    func detectChartPatterns(history: [PriceData], volumeHistory: [Int] = []) async -> [ImagePatternDetectionResult] {
         guard history.count >= 20 else { return [] }
         isProcessing = true
         defer { isProcessing = false }
-        var results: [PatternDetectionResult] = []
-        let patterns = ChartPattern.allCases.filter { $0 != .none }
+        var results: [ImagePatternDetectionResult] = []
+        let patterns = ImageChartPattern.allCases.filter { $0 != .none }
         for pattern in patterns {
             let detection = detectSinglePattern(pattern: pattern, history: history)
             if detection.confidence > 0.5 { results.append(detection) }
@@ -222,7 +222,7 @@ final class ImageRecognitionEngine: ObservableObject {
         return ImageFeatures(edges: edges, corners: corners, blobs: blobs, histograms: histograms, textureFeatures: texture, colorMoments: colorMoments, houghLines: houghLines, timestamp: Date())
     }
 
-    private func detectSinglePattern(pattern: ChartPattern, history: [PriceData]) -> PatternDetectionResult {
+    private func detectSinglePattern(pattern: ImageChartPattern, history: [PriceData]) -> ImagePatternDetectionResult {
         let closes = history.map(\.close)
         let highs = history.map(\.high)
         let lows = history.map(\.low)
@@ -260,9 +260,9 @@ final class ImageRecognitionEngine: ObservableObject {
             if abs(highSlope) > 0.001 && lows.allSatisfy { abs($0 - lowMean) / max(lowMean, 0.0001) < 0.02 } { confidence = 0.75; keyPoints = [CGPoint(x: 0, y: highs.last ?? 0), CGPoint(x: width, y: lowMean)] }
         default: confidence = 0.3
         }
-        let prediction = PatternDetectionResult.PatternPrediction(targetPrice: closes.last ?? 0 + height * 0.618, stopLoss: closes.last ?? 0 - height * 0.5, riskRewardRatio: 1.5, expectedReturn: height * 0.3, probability: confidence, timeToTarget: 10, direction: pattern == .doubleBottom || pattern == .headAndShoulders ? .buy : .sell)
-        let metrics = PatternDetectionResult.PatternMetrics(height: height, width: width, slope: calculateSlope(closes), volumeConfirmation: 0.6, breakoutProbability: confidence * 0.8, falsePositiveRate: 0.2, symmetryScore: 0.7, volumeProfile: Array(repeating: 0.5, count: 10))
-        return PatternDetectionResult(pattern: pattern, confidence: confidence, startIndex: startIndex, endIndex: endIndex, keyPoints: keyPoints, metrics: metrics, prediction: prediction)
+        let prediction = ImagePatternDetectionResult.PatternPrediction(targetPrice: closes.last ?? 0 + height * 0.618, stopLoss: closes.last ?? 0 - height * 0.5, riskRewardRatio: 1.5, expectedReturn: height * 0.3, probability: confidence, timeToTarget: 10, direction: pattern == .doubleBottom || pattern == .headAndShoulders ? .buy : .sell)
+        let metrics = ImagePatternDetectionResult.PatternMetrics(height: height, width: width, slope: calculateSlope(closes), volumeConfirmation: 0.6, breakoutProbability: confidence * 0.8, falsePositiveRate: 0.2, symmetryScore: 0.7, volumeProfile: Array(repeating: 0.5, count: 10))
+        return ImagePatternDetectionResult(pattern: pattern, confidence: confidence, startIndex: startIndex, endIndex: endIndex, keyPoints: keyPoints, metrics: metrics, prediction: prediction)
     }
 
     private func analyzeCandlestickPattern(window: [PriceData], index: Int) -> CandlestickPatternResult {

@@ -16,7 +16,7 @@ enum SentimentPolarity: String, Codable {
     case neutral = "NEUTRAL"
 }
 
-struct SentimentScore: Identifiable, Codable {
+struct AggregatedSentimentScore: Identifiable, Codable {
     let id = UUID()
     let source: SentimentSource
     let polarity: SentimentPolarity
@@ -44,7 +44,7 @@ struct CompositeSentiment: Codable, Identifiable {
 @MainActor
 final class SentimentAggregator: ObservableObject {
     static let shared = SentimentAggregator()
-    @Published private(set) var recentScores: [SentimentScore] = []
+    @Published private(set) var recentScores: [AggregatedSentimentScore] = []
     @Published private(set) var compositeSentiment: [String: CompositeSentiment] = [:]
     @Published private(set) var sentimentMomentum: [String: Double] = [:]
     @Published private(set) var sourceWeights: [SentimentSource: Double] = [
@@ -58,7 +58,7 @@ final class SentimentAggregator: ObservableObject {
         loadHistoricalSentiment()
     }
 
-    func addScore(_ score: SentimentScore) {
+    func addScore(_ score: AggregatedSentimentScore) {
         recentScores.append(score)
         if recentScores.count > maxHistorySize { recentScores.removeFirst(recentScores.count - maxHistorySize) }
         updateCompositeSentiment(for: score.asset)
@@ -118,8 +118,8 @@ final class SentimentAggregator: ObservableObject {
     private func loadHistoricalSentiment() {
         do {
             let historical = try storage.query("SELECT data FROM sentiment_scores ORDER BY timestamp DESC LIMIT 500", parameters: [:]) { row in
-                guard let data = row.data(at: 0) else { return SentimentScore(source: .news, polarity: .neutral, score: 0, confidence: 0, volume: 0, timestamp: Date(), headline: "", asset: "") }
-                return try JSONDecoder.flye.decode(SentimentScore.self, from: data)
+                guard let data = row.data(at: 0) else { return AggregatedSentimentScore(source: .news, polarity: .neutral, score: 0, confidence: 0, volume: 0, timestamp: Date(), headline: "", asset: "") }
+                return try JSONDecoder.flye.decode(AggregatedSentimentScore.self, from: data)
             }
             recentScores = historical
             for score in historical { updateCompositeSentiment(for: score.asset) }

@@ -14,7 +14,7 @@ struct KnowledgeBase: Codable, Identifiable {
     struct Fact: Codable, Identifiable {
         let id = UUID()
         var name: String
-        var value: AnyCodable
+        var value: ExpertAnyCodable
         var confidence: Double
         var source: FactSource
         var timestamp: Date
@@ -45,7 +45,7 @@ struct KnowledgeBase: Codable, Identifiable {
             let id = UUID()
             var factName: String
             var operator: ConditionOperator
-            var value: AnyCodable
+            var value: ExpertAnyCodable
             var negation: Bool
             var weight: Double
             var context: [String: String]
@@ -70,7 +70,7 @@ struct KnowledgeBase: Codable, Identifiable {
         struct Action: Codable, Identifiable {
             let id = UUID()
             var type: ActionType
-            var parameters: [String: AnyCodable]
+            var parameters: [String: ExpertAnyCodable]
             var priority: Int
             var condition: ActionCondition
 
@@ -100,7 +100,7 @@ struct KnowledgeBase: Codable, Identifiable {
         var active: Bool
         var parentGoal: UUID?
         var subgoals: [UUID]
-        var completionCriteria: [String: AnyCodable]
+        var completionCriteria: [String: ExpertAnyCodable]
         var deadline: Date?
     }
 
@@ -376,7 +376,7 @@ final class ExpertSystem: ObservableObject {
     }
 }
 
-struct AnyCodable: Codable {
+struct ExpertAnyCodable: Codable {
     var value: Any
 
     init(_ value: Any) { self.value = value }
@@ -387,8 +387,8 @@ struct AnyCodable: Codable {
         else if let int = try? container.decode(Int.self) { value = int }
         else if let double = try? container.decode(Double.self) { value = double }
         else if let string = try? container.decode(String.self) { value = string }
-        else if let array = try? container.decode([AnyCodable].self) { value = array.map { $0.value } }
-        else if let dict = try? container.decode([String: AnyCodable].self) { value = dict.mapValues { $0.value } }
+        else if let array = try? container.decode([ExpertAnyCodable].self) { value = array.map { $0.value } }
+        else if let dict = try? container.decode([String: ExpertAnyCodable].self) { value = dict.mapValues { $0.value } }
         else { value = NSNull() }
     }
 
@@ -398,8 +398,8 @@ struct AnyCodable: Codable {
         else if let int = value as? Int { try container.encode(int) }
         else if let double = value as? Double { try container.encode(double) }
         else if let string = value as? String { try container.encode(string) }
-        else if let array = value as? [Any] { try container.encode(array.map { AnyCodable($0) }) }
-        else if let dict = value as? [String: Any] { try container.encode(dict.mapValues { AnyCodable($0) }) }
+        else if let array = value as? [Any] { try container.encode(array.map { ExpertAnyCodable($0) }) }
+        else if let dict = value as? [String: Any] { try container.encode(dict.mapValues { ExpertAnyCodable($0) }) }
         else { try container.encodeNil() }
     }
 }

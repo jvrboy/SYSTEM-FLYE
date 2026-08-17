@@ -89,8 +89,8 @@ final class CloudSyncService: ObservableObject {
         case .localWins: data = conflict.localData
         case .remoteWins: data = conflict.remoteData
         case .merge:
-            let local = try? JSONDecoder.flye.decode([String: AnyCodable].self, from: conflict.localData)
-            let remote = try? JSONDecoder.flye.decode([String: AnyCodable].self, from: conflict.remoteData)
+            let local = try? JSONDecoder.flye.decode([String: CloudAnyCodable].self, from: conflict.localData)
+            let remote = try? JSONDecoder.flye.decode([String: CloudAnyCodable].self, from: conflict.remoteData)
             let merged = mergeDictionaries(local ?? [:], remote ?? [:])
             data = try JSONSerialization.data(withJSONObject: merged)
         }
@@ -155,14 +155,14 @@ final class CloudSyncService: ObservableObject {
         }
     }
 
-    private func mergeDictionaries(_ lhs: [String: AnyCodable], _ rhs: [String: AnyCodable]) -> [String: AnyCodable] {
+    private func mergeDictionaries(_ lhs: [String: CloudAnyCodable], _ rhs: [String: CloudAnyCodable]) -> [String: CloudAnyCodable] {
         var merged = lhs
         for (key, value) in rhs {
             if let lhsValue = lhs[key] {
                 if let lhsDict = lhsValue.dictionary, let rhsDict = value.dictionary {
-                    merged[key] = AnyCodable(mergeDictionaries(lhsDict, rhsDict))
+                    merged[key] = CloudAnyCodable(mergeDictionaries(lhsDict, rhsDict))
                 } else {
-                    merged[key] = AnyCodable(Date().timeIntervalSince1970 > lhs[key]?.doubleValue ?? 0 ? value : lhsValue)
+                    merged[key] = CloudAnyCodable(Date().timeIntervalSince1970 > lhs[key]?.doubleValue ?? 0 ? value : lhsValue)
                 }
             } else {
                 merged[key] = value
@@ -172,7 +172,7 @@ final class CloudSyncService: ObservableObject {
     }
 }
 
-struct AnyCodable: Codable, Equatable {
+struct CloudAnyCodable: Codable, Equatable {
     let value: Any
 
     init(_ value: Any) { self.value = value }
@@ -182,8 +182,8 @@ struct AnyCodable: Codable, Equatable {
         else if let double = try? container.decode(Double.self) { value = double }
         else if let string = try? container.decode(String.self) { value = string }
         else if let bool = try? container.decode(Bool.self) { value = bool }
-        else if let dict = try? container.decode([String: AnyCodable].self) { value = dict }
-        else if let array = try? container.decode([AnyCodable].self) { value = array.map { $0.value } }
+        else if let dict = try? container.decode([String: CloudAnyCodable].self) { value = dict }
+        else if let array = try? container.decode([CloudAnyCodable].self) { value = array.map { $0.value } }
         else { value = NSNull() }
     }
     func encode(to encoder: Encoder) throws {
@@ -192,8 +192,8 @@ struct AnyCodable: Codable, Equatable {
         else if let double = value as? Double { try container.encode(double) }
         else if let string = value as? String { try container.encode(string) }
         else if let bool = value as? Bool { try container.encode(bool) }
-        else if let dict = value as? [String: AnyCodable] { try container.encode(dict) }
-        else if let array = value as? [Any] { try container.encode(array.map { AnyCodable($0) }) }
+        else if let dict = value as? [String: CloudAnyCodable] { try container.encode(dict) }
+        else if let array = value as? [Any] { try container.encode(array.map { CloudAnyCodable($0) }) }
         else { try container.encodeNil() }
     }
 
@@ -202,5 +202,5 @@ struct AnyCodable: Codable, Equatable {
     var doubleValue: Double { (value as? Double) ?? 0.0 }
     var boolValue: Bool { (value as? Bool) ?? false }
     var arrayValue: [Any] { (value as? [Any]) ?? [] }
-    var dictionaryValue: [String: AnyCodable] { (value as? [String: AnyCodable]) ?? [:] }
+    var dictionaryValue: [String: CloudAnyCodable] { (value as? [String: CloudAnyCodable]) ?? [:] }
 }

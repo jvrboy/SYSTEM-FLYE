@@ -77,7 +77,9 @@ class AudioFileManager {
             try audioFile.read(into: buffer)
             return buffer
         } catch {
+            #if DEBUG
             print("Error loading audio file: \(error)")
+            #endif
             return nil
         }
     }
