@@ -17,7 +17,7 @@ actor BiometricGate {
     }
     
     func canEvaluate() -> Bool { context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil) }
-    func biometryType: LABiometryType { context.biometryType }
+    func biometryType() -> LABiometryType { context.biometryType }
 }
 
 // MARK: - Encrypted Storage
@@ -38,7 +38,9 @@ actor EncryptedStorage {
     }
     
     func encryptString(_ string: String) throws -> Data { try encrypt(Data(string.utf8)) }
-    func decryptString(_ data: Data) throws -> String { String(try decrypt(data)) }
+    func decryptString(_ data: Data) throws -> String {
+        String(data: try decrypt(data), encoding: .utf8) ?? ""
+    }
     
     private func getOrCreateKey() throws -> SymmetricKey {
         let query: [String: Any] = [

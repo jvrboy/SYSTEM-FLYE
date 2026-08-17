@@ -37,17 +37,14 @@ struct AdvancedToolsView: View {
                 overviewHeader
                 tabBar
                 
-                Group {
-                    switch selectedTool {
-                    case .analytics:
-                        AnalyticsPanel()
-                    case .comparison:
-                        ComparisonMatrix(selectedPairs: $selectedPairsForComparison)
-                    case .heatmap:
-                        SignalHeatmap()
-                    case .backend:
-                        BackendToolsPanel()
-                    }
+                if selectedTool == .analytics {
+                    AnalyticsPanel()
+                } else if selectedTool == .comparison {
+                    ComparisonMatrix(selectedPairs: $selectedPairsForComparison)
+                } else if selectedTool == .heatmap {
+                    SignalHeatmap()
+                } else {
+                    BackendToolsPanel()
                 }
             }
             .padding(18)
