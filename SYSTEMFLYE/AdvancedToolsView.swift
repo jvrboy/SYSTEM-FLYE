@@ -40,7 +40,7 @@ struct AdvancedToolsView: View {
                 if selectedTool == .analytics {
                     AnalyticsPanel()
                 } else if selectedTool == .comparison {
-                    ComparisonMatrix(selectedPairs: $selectedPairsForComparison)
+                    ComparisonMatrix(selectedPairsForComparison: $selectedPairsForComparison)
                 } else if selectedTool == .heatmap {
                     SignalHeatmap()
                 } else {
