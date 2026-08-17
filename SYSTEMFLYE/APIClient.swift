@@ -424,9 +424,9 @@ class APIClientManager: ObservableObject {
 
     private func loadCredential(type: ProviderType, fallback: Bool) -> (type: ProviderType, apiKey: String, accountID: String)? {
         let prefix = credentialPrefix(type: type, fallback: fallback)
-        guard let storedKey = try? credentials.value(for: "\(prefix).apiKey"), let key = storedKey, !key.isEmpty else { return nil }
-        let account = try? credentials.value(for: "\(prefix).accountID")
-        return (type, key, account ?? "")
+        guard let key = try? credentials.value(for: "\(prefix).apiKey"), !key.isEmpty else { return nil }
+        let account = (try? credentials.value(for: "\(prefix).accountID")) ?? ""
+        return (type, key, account)
     }
     
     func testConnection() async {

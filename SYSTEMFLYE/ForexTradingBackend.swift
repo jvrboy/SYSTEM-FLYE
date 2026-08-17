@@ -70,9 +70,9 @@ final class ForexTradingBackend: ObservableObject {
     @Published private(set) var pipelineProgress: [ForexPipelineStage: Double] = [:]
     @Published private(set) var isRunning = false
     @Published private(set) var lastError: String?
-    @Published private(set) var lastWalkForward: WalkForwardResult?
-    @Published private(set) var lastCorrelationReport: PortfolioCorrelationReport?
-    @Published private(set) var lastPortfolioRiskGate: PortfolioRiskGate?
+    @Published var lastWalkForward: WalkForwardResult?
+    @Published var lastCorrelationReport: PortfolioCorrelationReport?
+    @Published var lastPortfolioRiskGate: PortfolioRiskGate?
 
     func analyze(pair: String, history: [PriceData], basic: TechnicalIndicators, advanced: AdvancedTechnicalIndicators) -> ForexAnalysisReport? {
         guard let last = history.last, history.count >= 20 else {

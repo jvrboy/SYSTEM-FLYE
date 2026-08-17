@@ -125,7 +125,15 @@ extension ForexTradingBackend {
         guard count > 2 else { return ([], []) }
         let leftCloses = Array(left.suffix(count)).map(\.close)
         let rightCloses = Array(right.suffix(count)).map(\.close)
-        return ((1..<count).map { leftCloses[$0 - 1] > 0 ? leftCloses[$0] / leftCloses[$0 - 1] - 1 : 0 }, (1..<count).map { rightCloses[$0 - 1] > 0 ? rightCloses[$0] / rightCloses[$0 - 1] - 1 : 0 })
+        var leftReturns: [Double] = []
+        var rightReturns: [Double] = []
+        for index in 1..<count {
+            let leftReturn = leftCloses[index - 1] > 0 ? leftCloses[index] / leftCloses[index - 1] - 1 : 0
+            let rightReturn = rightCloses[index - 1] > 0 ? rightCloses[index] / rightCloses[index - 1] - 1 : 0
+            leftReturns.append(leftReturn)
+            rightReturns.append(rightReturn)
+        }
+        return (leftReturns, rightReturns)
     }
 
     private func pearsonCorrelation(returns: ([Double], [Double])) -> Double {
