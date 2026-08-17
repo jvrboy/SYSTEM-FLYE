@@ -220,8 +220,8 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
         var magnitudes = [Float](repeating: 0, count: frameLength / 2)
         
         for i in 0..<frameLength / 2 {
-            let real = realParts[i]
-            let imag = imaginaryParts[i]
+            let real = realBuffer[i]
+            let imag = imaginaryBuffer[i]
             magnitudes[i] = sqrt(real * real + imag * imag)
         }
         
