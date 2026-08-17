@@ -147,7 +147,11 @@ final class FeaturePlatformStore: ObservableObject {
         .init(id: "risk", name: "Risk Console", subtitle: "Exposure, drawdown, and sizing", icon: "shield.lefthalf.filled", accent: .orange, capability: .risk),
         .init(id: "calendar", name: "Macro Calendar", subtitle: "Event impact and session windows", icon: "calendar.badge.clock", accent: .green, capability: .calendar),
         .init(id: "scenarios", name: "Scenario Lab", subtitle: "Shock paths and outcome ranges", icon: "chart.bar.xaxis", accent: .pink, capability: .scenarios),
-        .init(id: "execution", name: "Execution Planner", subtitle: "Entry, stop, target, and invalidation", icon: "target", accent: .yellow, capability: .execution)
+        .init(id: "execution", name: "Execution Planner", subtitle: "Entry, stop, target, and invalidation", icon: "target", accent: .yellow, capability: .execution),
+        .init(id: "genetic", name: "Genetic Optimizer", subtitle: "Strategy evolution with out-of-sample fitness", icon: "sparkles.rectangle.stack", accent: .purple, capability: .execution),
+        .init(id: "news", name: "News Radar", subtitle: "Live GDELT currency tone fusion", icon: "newspaper.fill", accent: .cyan, capability: .calendar),
+        .init(id: "hedging", name: "Hedging Matrix", subtitle: "Multi-currency exposure offsets", icon: "shield.lefthalf.filled", accent: .green, capability: .risk),
+        .init(id: "performance", name: "Performance Lab", subtitle: "Sortino, Calmar, drawdown, and profit factor", icon: "chart.line.uptrend.xyaxis", accent: .orange, capability: .risk)
     ]
 
     @Published var watchlist: [ForexWatchItem] = [

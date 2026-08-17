@@ -11,6 +11,7 @@ struct SYSTEMFLYEApp: App {
     @StateObject private var featurePlatform = FeaturePlatformStore.shared
     @StateObject private var forexTradingBackend = ForexTradingBackend.shared
     @StateObject private var apiClientManager = APIClientManager.shared
+    @StateObject private var newsSentimentService = NewsSentimentService.shared
     @StateObject private var productionStore = ProductionStore()
     @State private var mode: FlyeMode = .intelligence
 
@@ -26,9 +27,11 @@ struct SYSTEMFLYEApp: App {
                 .environmentObject(featurePlatform)
                 .environmentObject(forexTradingBackend)
                 .environmentObject(apiClientManager)
+                .environmentObject(newsSentimentService)
                 .environmentObject(productionStore)
                 .task {
                     operationalBackend.start()
+                    newsSentimentService.startMonitoring(pairs: ["EURUSD", "GBPUSD", "USDJPY"], interval: 300)
                     await productionStore.restore()
                 }
                 .preferredColorScheme(.dark)
@@ -128,5 +131,6 @@ enum FlyeTheme {
         .environmentObject(FeaturePlatformStore.shared)
         .environmentObject(ForexTradingBackend.shared)
         .environmentObject(APIClientManager.shared)
+        .environmentObject(NewsSentimentService.shared)
         .environmentObject(ProductionStore())
 }

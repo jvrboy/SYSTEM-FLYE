@@ -167,6 +167,7 @@ struct PlatformExpansionView: View {
                 .buttonStyle(.borderedProminent).tint(SystemFlyeTheme.cyan).disabled(forexBackend.isRunning)
             }
             ForexRiskToolsView()
+            ForexIntelligenceToolsView()
 
             if let report = forexBackend.reports["EURUSD"] {
                 VStack(alignment: .leading, spacing: 8) {

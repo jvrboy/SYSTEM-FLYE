@@ -73,6 +73,10 @@ final class ForexTradingBackend: ObservableObject {
     @Published var lastWalkForward: WalkForwardResult?
     @Published var lastCorrelationReport: PortfolioCorrelationReport?
     @Published var lastPortfolioRiskGate: PortfolioRiskGate?
+    @Published var lastOptimization: GeneticOptimizationResult?
+    @Published var lastRiskMetrics: RiskAdjustedMetrics?
+    @Published var lastNewsSentiment: NewsSentimentSnapshot?
+    @Published var lastHedgingReport: HedgingReport?
 
     func analyze(pair: String, history: [PriceData], basic: TechnicalIndicators, advanced: AdvancedTechnicalIndicators) -> ForexAnalysisReport? {
         guard let last = history.last, history.count >= 20 else {
@@ -138,6 +142,34 @@ final class ForexTradingBackend: ObservableObject {
         guard let report = analyze(pair: pair, history: history, basic: basic, advanced: advanced), let plan = buildPlan(pair: pair, report: report, accountBalance: accountBalance) else { return nil }
         _ = validate(plan: plan, accountBalance: accountBalance)
         return plan
+    }
+
+    func optimizeStrategy(pair: String, history: [PriceData], generations: Int = 12, populationSize: Int = 28) -> GeneticOptimizationResult? {
+        let result = StrategyOptimizer.optimize(pair: pair, history: history, generations: generations, populationSize: populationSize)
+        lastOptimization = result
+        return result
+    }
+
+    func calculateHedging(plans: [ForexTradePlan], pairDefinitions: [ForexPair]) -> HedgingReport {
+        let report = ForexHedgingEngine.analyze(plans: plans, pairDefinitions: pairDefinitions)
+        lastHedgingReport = report
+        return report
+    }
+
+    func applyNewsSentiment(_ snapshot: NewsSentimentSnapshot, to report: ForexAnalysisReport) -> ForexAnalysisReport {
+        let alignment = report.bias == .buy ? snapshot.score : report.bias == .sell ? -snapshot.score : 0
+        let confidence = min(0.99, max(0.05, report.confidence + alignment * 0.15))
+        let recommendation = "\(report.recommendation) News tone: \(snapshot.score >= 0 ? "supportive" : "cautious") (\(snapshot.articleCount) articles)."
+        let fused = ForexAnalysisReport(pair: report.pair, lastPrice: report.lastPrice, bias: report.bias, confidence: confidence, trendScore: report.trendScore, momentumScore: report.momentumScore, volatilityScore: report.volatilityScore, liquidityScore: report.liquidityScore, support: report.support, resistance: report.resistance, atr: report.atr, recommendation: recommendation, generatedAt: Date())
+        lastNewsSentiment = snapshot
+        reports[report.pair] = fused
+        return fused
+    }
+
+    func riskMetrics(returns: [Double], initialCapital: Double = 1) -> RiskAdjustedMetrics {
+        let result = RiskMetricsCalculator.calculate(returns: returns, initialCapital: initialCapital)
+        lastRiskMetrics = result
+        return result
     }
 
     func backtest(pair: String, history: [PriceData], basicPeriod: Int = 20) -> ForexBacktestResult? {

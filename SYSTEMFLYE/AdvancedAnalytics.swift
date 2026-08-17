@@ -10,6 +10,7 @@ final class AnalyticsEngine: ObservableObject {
     @Published private(set) var valueAtRisk: Double = 0
     @Published private(set) var sharpeRatio: Double = 0
     @Published private(set) var sortinoRatio: Double = 0
+    @Published private(set) var calmarRatio: Double = 0
     @Published private(set) var correlationMatrix: [[Double]] = []
     @Published private(set) var anomalies: [Anomaly] = []
     @Published private(set) var stressTestResults: StressTestResult?
@@ -56,6 +57,12 @@ final class AnalyticsEngine: ObservableObject {
         return (annualizedReturn - riskFreeRate) / annualizedVol
     }
     
+    func calculateCalmarRatio(returns: [Double], initialCapital: Double = 1) -> Double {
+        let metrics = RiskMetricsCalculator.calculate(returns: returns, initialCapital: initialCapital)
+        calmarRatio = metrics.calmar
+        return metrics.calmar
+    }
+
     func calculateSortinoRatio(returns: [Double], riskFreeRate: Double = 0.02) -> Double {
         guard returns.count > 1 else { return 0 }
         let mean = returns.reduce(0, +) / Double(returns.count)
