@@ -87,12 +87,19 @@ enum EnvelopeGenerator {
         let attackEnd = min(gatePoint, max(0.001, attack))
         let decayEnd = min(gatePoint, attackEnd + max(0.001, decay))
         let releaseStart = max(decayEnd, min(0.99, gatePoint))
-        return (0..<safeCount).map { index in
-            let time = Double(index) / Double(max(1, safeCount - 1))
+        let denominator = Double(max(1, safeCount - 1))
+        let decaySpan = max(0.001, decayEnd - attackEnd)
+        let releaseSpan = max(0.001, release)
+        return (0..<safeCount).map { index -> Float in
+            let time = Double(index) / denominator
             if time < attackEnd { return Float(time / attackEnd) }
-            if time < decayEnd { return Float(1 - (1 - sustain) * ((time - attackEnd) / max(0.001, decayEnd - attackEnd))) }
+            if time < decayEnd {
+                let progress = (time - attackEnd) / decaySpan
+                return Float(1 - (1 - sustain) * progress)
+            }
             if time < releaseStart { return Float(sustain) }
-            return Float(sustain * max(0, 1 - (time - releaseStart) / max(0.001, release)))
+            let releaseProgress = max(0, 1 - (time - releaseStart) / releaseSpan)
+            return Float(sustain * releaseProgress)
         }
     }
 

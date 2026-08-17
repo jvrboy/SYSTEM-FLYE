@@ -4,8 +4,8 @@ struct EnvelopeEditorView: View {
     @Binding var points: [EnvelopePoint]
     @State private var selectedPreset = "Custom"
 
-    private let presets: [(String, CustomEnvelope)] = [
-        ("Neutral", .neutral), ("Pluck", .pluck), ("Pad", .pad), ("Swell", .swell)
+    private let presets: [String: CustomEnvelope] = [
+        "Neutral": .neutral, "Pluck": .pluck, "Pad": .pad, "Swell": .swell
     ]
 
     var body: some View {
@@ -27,11 +27,11 @@ struct EnvelopeEditorView: View {
 
             Picker("Envelope", selection: $selectedPreset) {
                 Text("Custom").tag("Custom")
-                ForEach(presets, id: \.0) { Text($0.0).tag($0.0) }
+                ForEach(presets.keys.sorted(), id: \.self) { Text($0).tag($0) }
             }
             .pickerStyle(.segmented)
             .onChange(of: selectedPreset) { _, newValue in
-                if let preset = presets.first(where: { $0.0 == newValue }) { points = preset.1.points }
+                if let preset = presets[newValue] { points = preset.points }
             }
 
             ForEach(points.indices, id: \.self) { index in
@@ -40,7 +40,7 @@ struct EnvelopeEditorView: View {
                         Text("POINT \(index + 1)")
                             .font(.caption2.weight(.bold)).tracking(1.2).foregroundStyle(.secondary)
                         Spacer()
-                        Text("t \(points[index].time, specifier: \"%.2f\")  ·  v \(points[index].value, specifier: \"%.2f\")")
+                        Text(String(format: "t %.2f  ·  v %.2f", points[index].time, points[index].value))
                             .font(.caption2.monospacedDigit()).foregroundStyle(Color.cyan)
                     }
                     HStack(spacing: 8) {
