@@ -5,6 +5,8 @@ struct SYSTEMFLYEApp: App {
     @StateObject private var marketDataManager = MarketDataManager()
     @StateObject private var signalGenerator = SignalGenerator()
     @StateObject private var advancedStore = AdvancedStore()
+    @StateObject private var analyticsEngine = AnalyticsEngine()
+    @StateObject private var backendServiceManager = BackendServiceManager.shared
     @StateObject private var productionStore = ProductionStore()
     @State private var mode: FlyeMode = .intelligence
 
@@ -14,6 +16,8 @@ struct SYSTEMFLYEApp: App {
                 .environmentObject(marketDataManager)
                 .environmentObject(signalGenerator)
                 .environmentObject(advancedStore)
+                .environmentObject(analyticsEngine)
+                .environmentObject(backendServiceManager)
                 .environmentObject(productionStore)
                 .task { await productionStore.restore() }
                 .preferredColorScheme(.dark)
@@ -102,4 +106,12 @@ enum FlyeTheme {
     static let muted = Color(red: 0.48, green: 0.55, blue: 0.66)
 }
 
-#Preview { FlyeRootView(mode: .constant(.intelligence)).environmentObject(MarketDataManager()).environmentObject(SignalGenerator()) }
+#Preview {
+    FlyeRootView(mode: .constant(.intelligence))
+        .environmentObject(MarketDataManager())
+        .environmentObject(SignalGenerator())
+        .environmentObject(AdvancedStore())
+        .environmentObject(AnalyticsEngine())
+        .environmentObject(BackendServiceManager.shared)
+        .environmentObject(ProductionStore())
+}

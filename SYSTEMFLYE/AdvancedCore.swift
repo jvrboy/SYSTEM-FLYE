@@ -56,8 +56,32 @@ final class AdvancedStore: ObservableObject {
         QuantSignal(pair: "AUD/USD", direction: "WATCH", score: 0.51, regime: "Range", risk: "0.4R")
     ] }
 
-    func runAgent(_ id: UUID) { if let index = agents.firstIndex(where: { $0.id == id }) { agents[index].status = .running; runCount += 1; DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in self?.agents[index].status = .ready } } }
-    func train() { guard !isTraining else { return }; isTraining = true; neuralEpoch = 0; Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { timer in Task { @MainActor in self.neuralEpoch += 1; self.signalBias = min(0.97, 0.67 + Double(self.neuralEpoch) * 0.006); if self.neuralEpoch >= 50 { timer.invalidate(); self.isTraining = false } } } }
+    func runAgent(_ id: UUID) {
+        guard let index = agents.firstIndex(where: { $0.id == id }) else { return }
+        agents[index].status = .running
+        runCount += 1
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(1.2))
+            guard let self, let currentIndex = self.agents.firstIndex(where: { $0.id == id }) else { return }
+            self.agents[currentIndex].status = .ready
+        }
+    }
+
+    func train() {
+        guard !isTraining else { return }
+        isTraining = true
+        neuralEpoch = 0
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            for epoch in 1...50 {
+                try? await Task.sleep(for: .milliseconds(80))
+                guard !Task.isCancelled else { return }
+                self.neuralEpoch = epoch
+                self.signalBias = min(0.97, 0.67 + Double(epoch) * 0.006)
+            }
+            self.isTraining = false
+        }
+    }
 }
 
 struct SystemFlyeTheme {

@@ -100,6 +100,7 @@ struct AdvancedToolsView: View {
 struct AnalyticsPanel: View {
     @EnvironmentObject private var analytics: AnalyticsEngine
     @EnvironmentObject private var store: AdvancedStore
+    @EnvironmentObject private var marketDataManager: MarketDataManager
     @State private var isRunning = false
     @State private var selectedTimeframe: AnalyticsTimeframe = .oneWeek
     
@@ -122,7 +123,7 @@ struct AnalyticsPanel: View {
                 MetricTile(label: "Value at Risk", value: String(format: "%.1f%%", analytics.valueAtRisk * 100), detail: "95% confidence", tint: .orange)
                 MetricTile(label: "Anomalies", value: "\(analytics.anomalies.count)", detail: "price outliers detected", tint: analytics.anomalies.count > 0 ? .red : .green)
                 MetricTile(label: "Monte Carlo", value: analytics.monteCarloResults.isEmpty ? "—" : "\(analytics.monteCarloResults.count) sims", detail: "stochastic paths", tint: .purple)
-                MetricTile(label: "Max Drawdown", value: String(format: "%.2f%%", analytics.calculateMaxDrawdown(prices: Array(repeating: 1.0, count: 20))), detail: "worst case", tint: .orange)
+                MetricTile(label: "Max Drawdown", value: String(format: "%.2f%%", analytics.calculateMaxDrawdown(prices: selectedPrices)), detail: "worst case", tint: .orange)
             }
             
             if let stress = analytics.stressTestResults {
@@ -181,8 +182,11 @@ struct AnalyticsPanel: View {
     }
     
     private func runMonteCarlo() async {
-        let basePrice = store.selectedPair == "EUR/USD" ? 1.08 : 1.26
-        await analytics.runMonteCarloSimulation(basePrice: basePrice, volatility: 0.15, days: 30, simulations: 500)
+        let prices = selectedPrices
+        let basePrice = prices.last ?? (store.selectedPair == "EUR/USD" ? 1.08 : 1.26)
+        let returns = zip(prices.dropFirst(), prices).map { ($0 - $1) / max($1, 0.00001) }
+        let volatility = max(PriceFormatter.standardDeviation(returns), 0.05)
+        await analytics.runMonteCarloSimulation(basePrice: basePrice, volatility: volatility, days: 30, simulations: 500)
     }
     
     private func runStressTest() async {
@@ -196,8 +200,12 @@ struct AnalyticsPanel: View {
     }
     
     private func detectAnomalies() async {
-        let prices = Array(repeating: 1.0, count: 50).enumerated().map { idx, val in val * (1 + sin(Double(idx) * 0.2) * 0.05 + (idx == 25 ? 0.15 : 0)) }
-        _ = analytics.detectAnomalies(prices: prices)
+        _ = analytics.detectAnomalies(prices: selectedPrices)
+    }
+
+    private var selectedPrices: [Double] {
+        let symbol = store.selectedPair.replacingOccurrences(of: "/", with: "")
+        return (marketDataManager.priceHistory[symbol] ?? marketDataManager.priceHistory[store.selectedPair] ?? []).map(\.close)
     }
     
     private func correlationColor(for value: Double) -> Color {
@@ -288,26 +296,37 @@ struct ComparisonCard: View {
     private var metricValue: String {
         switch metric {
         case .price: return String(format: "%.5f", marketDataManager.currentPrices[pair] ?? 0)
-        case .volatility: return String(format: "%.2f%%", Double.random(in: 0.1...2.0))
-        case .rsi: return String(format: "%.1f", Double.random(in: 30...70))
-        case .volume: return String(format: "%.0fK", Double.random(in: 100...1000))
+        case .volatility:
+            let history = marketDataManager.priceHistory[pair] ?? []
+            let closes = history.map(\.close)
+            guard closes.count > 1 else { return "—" }
+            let returns = zip(closes.dropFirst(), closes).map { ($0 - $1) / max($1, 0.00001) }
+            let mean = returns.reduce(0, +) / Double(returns.count)
+            let variance = returns.map { pow($0 - mean, 2) }.reduce(0, +) / Double(max(returns.count - 1, 1))
+            return String(format: "%.2f%%", sqrt(variance) * 100)
+        case .rsi:
+            let indicators = marketDataManager.technicalIndicators[pair]
+            return indicators.map { String(format: "%.1f", $0.rsi) } ?? "—"
+        case .volume:
+            let volume = marketDataManager.priceHistory[pair]?.last?.volume ?? 0
+            return volume > 0 ? String(format: "%.0fK", Double(volume) / 1_000) : "—"
         }
     }
     
     private var valueColor: Color {
-        switch metric {
-        case .rsi: return (Double.random(in: 0...1) > 0.5) ? .green : .red
-        default: return .white
-        }
+        guard metric == .rsi,
+              let rsi = marketDataManager.technicalIndicators[pair]?.rsi else { return .white }
+        return rsi < 30 ? .green : rsi > 70 ? .red : .white
     }
-    
-    private var trendIcon: String {
-        Double.random(in: 0...1) > 0.5 ? "arrow.up.right" : "arrow.down.right"
+
+    private var trendIsPositive: Bool {
+        let history = marketDataManager.priceHistory[pair] ?? []
+        guard let first = history.first?.close, let last = history.last?.close else { return true }
+        return last >= first
     }
-    
-    private var trendColor: Color {
-        Double.random(in: 0...1) > 0.5 ? .green : .red
-    }
+
+    private var trendIcon: String { trendIsPositive ? "arrow.up.right" : "arrow.down.right" }
+    private var trendColor: Color { trendIsPositive ? .green : .red }
 }
 
 // MARK: - Signal Heatmap
@@ -382,6 +401,7 @@ struct HeatmapCell: View {
 struct BackendToolsPanel: View {
     @EnvironmentObject private var backend: BackendServiceManager
     @State private var cacheSize: Int = 0
+    @State private var circuitState = "CLOSED"
     
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -390,7 +410,7 @@ struct BackendToolsPanel: View {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                 MetricTile(label: "Active connections", value: "\(backend.activeConnections)", detail: "concurrent requests", tint: SystemFlyeTheme.cyan)
                 MetricTile(label: "Data transferred", value: backend.formattedDataTransferred(), detail: "session total", tint: .purple)
-                MetricTile(label: "Circuit state", value: CircuitBreaker.shared.currentState().rawValue, detail: "backend resilience", tint: .green)
+                MetricTile(label: "Circuit state", value: circuitState, detail: "backend resilience", tint: .green)
                 MetricTile(label: "Cache entries", value: "\(cacheSize)", detail: "in-memory cache", tint: .orange)
             }
             
@@ -402,8 +422,10 @@ struct BackendToolsPanel: View {
                     cacheSize = 0
                 }
                 .buttonStyle(.bordered).tint(.orange)
-                Button("Run Diagnostics") { Task { await BackendServiceManager.shared.runAll() } }
-                    .buttonStyle(.bordered).tint(.purple)
+                Button("Run Diagnostics") {
+                    Task { await BackgroundSyncScheduler.shared.runAll() }
+                }
+                .buttonStyle(.bordered).tint(.purple)
             }
             
             Text("Service Health").font(.caption2.weight(.bold)).tracking(1.5).foregroundStyle(.secondary)
@@ -411,6 +433,7 @@ struct BackendToolsPanel: View {
                 ServiceHealthRow(service: service)
             }
         }
+        .task { circuitState = await CircuitBreaker.shared.currentState().rawValue.uppercased() }
     }
 }
 

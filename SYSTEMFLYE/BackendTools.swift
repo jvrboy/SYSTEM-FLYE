@@ -18,20 +18,20 @@ actor CircuitBreaker {
     }
     
     func execute<T>(_ operation: @escaping () async throws -> T) async throws -> T {
-        let currentState = await currentState()
+        let currentState = currentState()
         guard currentState != .open else { throw BackendError.circuitOpen }
         
         do {
             let result = try await operation()
-            await recordSuccess()
+            recordSuccess()
             return result
         } catch {
-            await recordFailure()
+            recordFailure()
             throw error
         }
     }
     
-    private func currentState() async -> CircuitState {
+    func currentState() -> CircuitState {
         guard state == .open, let lastFailure = lastFailureTime else { return state }
         if Date().timeIntervalSince(lastFailure) > resetInterval { state = .halfOpen }
         return state
@@ -77,32 +77,49 @@ actor TokenBucketRateLimiter {
 // MARK: - Batch Request Coordinator
 actor BatchCoordinator {
     static let shared = BatchCoordinator()
-    private var pendingRequests: [UUID: (operation: () async throws -> Any, continuation: CheckedContinuation<Any, Error>)] = [:]
-    private let batchLock = NSLock()
-    private var batchTimer: Timer?
-    private let batchWindow: TimeInterval = 0.1
+    private var pendingRequests: [(operation: () async throws -> Any, resume: (Result<Any, Error>) -> Void)] = []
+    private let batchWindow: UInt64 = 100_000_000
     private let maxBatchSize = 10
+    private var flushTask: Task<Void, Never>?
     
     func add<T>(_ operation: @escaping () async throws -> T) async throws -> T {
-        let id = UUID()
-        return try await withCheckedThrowingContinuation { continuation in
-            batchLock.lock()
-            pendingRequests[id] = (operation, continuation)
-            if pendingRequests.count >= maxBatchSize { flush() }
-            batchLock.unlock()
-            if batchTimer == nil {
-                batchTimer = Timer.scheduledTimer(withTimeInterval: batchWindow, repeats: false) { [weak self] _ in self?.flush() }
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<T, Error>) in
+            let resume: (Result<Any, Error>) -> Void = { result in
+                switch result {
+                case .success(let value):
+                    guard let typedValue = value as? T else {
+                        continuation.resume(throwing: BackendError.serviceUnavailable)
+                        return
+                    }
+                    continuation.resume(returning: typedValue)
+                case .failure(let error):
+                    continuation.resume(throwing: error)
+                }
+            }
+            pendingRequests.append((operation: { try await operation() }, resume: resume))
+            if pendingRequests.count >= maxBatchSize {
+                flushTask?.cancel()
+                flushTask = nil
+                flush()
+            } else if flushTask == nil {
+                flushTask = Task { [weak self] in
+                    try? await Task.sleep(nanoseconds: self?.batchWindow ?? 100_000_000)
+                    guard !Task.isCancelled else { return }
+                    await self?.flush()
+                }
             }
         }
     }
     
     private func flush() {
-        batchLock.lock()
         let batch = pendingRequests
         pendingRequests.removeAll()
-        batchLock.unlock()
-        Task {
-            for (_, item) in batch { try? await item.operation() }
+        flushTask = nil
+        for item in batch {
+            Task {
+                do { item.resume(.success(try await item.operation())) }
+                catch { item.resume(.failure(error)) }
+            }
         }
     }
 }
@@ -170,15 +187,15 @@ struct LoggingInterceptor: RequestInterceptor {
     }
 }
 
-struct MetricsInterceptor: RequestInterceptor {
+final class MetricsInterceptor: RequestInterceptor {
     let collector = MetricsCollector.shared
     private var startTime: Date?
     
-    mutating func intercept(request: URLRequest) async -> URLRequest {
+    func intercept(request: URLRequest) async -> URLRequest {
         startTime = Date()
         return request
     }
-    mutating func intercept(response: (data: Data, response: HTTPURLResponse), for request: URLRequest) async -> (data: Data, response: HTTPURLResponse) {
+    func intercept(response: (data: Data, response: HTTPURLResponse), for request: URLRequest) async -> (data: Data, response: HTTPURLResponse) {
         let latency = startTime.map { Date().timeIntervalSince($0) } ?? 0
         collector.record(success: 200...299 ~= response.response.statusCode, latency: latency)
         return response

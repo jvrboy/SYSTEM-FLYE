@@ -1,4 +1,5 @@
 import Foundation
+import Security
 
 struct RequestPolicy: Sendable {
     var timeout: TimeInterval = 20
@@ -38,7 +39,16 @@ actor FlyeHTTPClient {
                     throw APIError.serverError
                 }
                 return (data, http)
-            } catch is CancellationError { throw CancellationError() }
+            }             catch is CancellationError { throw CancellationError() }
+            catch let error as APIError {
+                switch error {
+                case .authenticationError, .invalidURL, .invalidResponse, .decodingError:
+                    throw error
+                case .networkError, .rateLimitExceeded, .serverError:
+                    lastError = error
+                    if attempt < policy.maxRetries { try await backoff(attempt) }
+                }
+            }
             catch {
                 lastError = error
                 if attempt < policy.maxRetries { try await backoff(attempt) }

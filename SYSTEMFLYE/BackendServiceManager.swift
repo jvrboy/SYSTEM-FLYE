@@ -2,7 +2,7 @@ import Foundation
 import Combine
 
 // MARK: - Service Health
-enum ServiceHealth: String { case healthy = "HEALTHY", degraded = "DEGRADED", down = "DOWN", unknown = "UNKNOWN" }
+enum ServiceHealth: String, Codable { case healthy = "HEALTHY", degraded = "DEGRADED", down = "DOWN", unknown = "UNKNOWN" }
 
 struct ServiceDescriptor: Identifiable, Codable {
     let id: UUID
@@ -123,7 +123,6 @@ struct PipelineStage: Identifiable {
 actor CacheManager {
     static let shared = CacheManager()
     private let memoryCache = NSCache<NSString, AnyObject>()
-    private let diskQueue = DispatchQueue(label: "cache.disk", qos: .background)
     private let cacheDirectory: URL
     
     init() {
@@ -133,25 +132,29 @@ actor CacheManager {
     }
     
     func set<T: Codable>(_ value: T, for key: String, ttl: TimeInterval = 3600) {
-        memoryCache.setObject(value as AnyObject, forKey: key as NSString)
-        diskQueue.async { [weak self] in
-            guard let data = try? JSONEncoder.flye.encode(value) else { return }
-            let fileURL = self?.cacheDirectory.appendingPathComponent("\(key.hash).cache")
-            try? data.write(to: fileURL!, options: .atomic)
-            try? FileManager.default.setAttributes([.modificationDate: Date().addingTimeInterval(ttl)], ofItemAtPath: fileURL!.path)
-        }
+        guard let data = try? JSONEncoder.flye.encode(value) else { return }
+        memoryCache.setObject(data as NSData, forKey: key as NSString)
+        let fileURL = cacheDirectory.appendingPathComponent("\(key.hashValue).cache")
+        try? data.write(to: fileURL, options: .atomic)
+        try? FileManager.default.setAttributes([.modificationDate: Date().addingTimeInterval(ttl)], ofItemAtPath: fileURL.path)
     }
     
     func get<T: Codable>(_ type: T.Type, for key: String) -> T? {
-        if let cached = memoryCache.object(forKey: key as NSString) as? T { return cached }
-        let fileURL = cacheDirectory.appendingPathComponent("\(key.hash).cache")
-        guard let data = try? Data(contentsOf: fileURL), let value = try? JSONDecoder.flye.decode(T.self, from: data) else { return nil }
-        memoryCache.setObject(value as AnyObject, forKey: key as NSString)
+        if let cached = memoryCache.object(forKey: key as NSString) as? NSData,
+           let value = try? JSONDecoder.flye.decode(T.self, from: cached as Data) { return value }
+        let fileURL = cacheDirectory.appendingPathComponent("\(key.hashValue).cache")
+        guard let attributes = try? FileManager.default.attributesOfItem(atPath: fileURL.path),
+              let expiration = attributes[.modificationDate] as? Date,
+              expiration > Date(),
+              let data = try? Data(contentsOf: fileURL),
+              let value = try? JSONDecoder.flye.decode(T.self, from: data) else { return nil }
+        memoryCache.setObject(data as NSData, forKey: key as NSString)
         return value
     }
     
     func clear() {
         memoryCache.removeAllObjects()
         try? FileManager.default.removeItem(at: cacheDirectory)
+        try? FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
     }
 }

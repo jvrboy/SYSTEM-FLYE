@@ -1,5 +1,6 @@
 import Foundation
-import Accelerate
+import Combine
+import SwiftUI
 
 // MARK: - Analytics Engine
 @MainActor
@@ -14,32 +15,34 @@ final class AnalyticsEngine: ObservableObject {
     @Published private(set) var stressTestResults: StressTestResult?
     
     func runMonteCarloSimulation(basePrice: Double, volatility: Double, days: Int = 30, simulations: Int = 1000) async {
-        await withCheckedContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
-                var results: [Double] = []
-                let dt = 1.0 / 252.0
-                let mu = 0.05
-                let steps = days
-                
-                for _ in 0..<simulations {
-                    var price = basePrice
-                    for _ in 0..<steps {
-                        let z = self.randomNormal()
-                        price *= exp((mu - 0.5 * volatility * volatility) * dt + volatility * sqrt(dt) * z)
-                    }
-                    results.append(price)
-                }
-                self.monteCarloResults = results
-                continuation.resume()
-            }
+        guard basePrice > 0, volatility >= 0, days > 0, simulations > 0 else {
+            monteCarloResults = []
+            return
         }
+        let results = await Task.detached(priority: .userInitiated) {
+            var results: [Double] = []
+            results.reserveCapacity(simulations)
+            let dt = 1.0 / 252.0
+            let mu = 0.05
+            for _ in 0..<simulations {
+                var price = basePrice
+                for _ in 0..<days {
+                    let z = Self.randomNormal()
+                    price *= exp((mu - 0.5 * volatility * volatility) * dt + volatility * sqrt(dt) * z)
+                }
+                results.append(price)
+            }
+            return results
+        }.value
+        monteCarloResults = results
     }
     
     func calculateValueAtRisk(returns: [Double], confidence: Double = 0.95) -> Double {
         guard returns.count > 1 else { return 0 }
         let sorted = returns.sorted()
-        let index = Int(Double(sorted.count) * (1 - confidence))
-        return sorted[min(index, sorted.count - 1)]
+        let clampedConfidence = min(max(confidence, 0), 1)
+        let index = Int(Double(sorted.count - 1) * (1 - clampedConfidence))
+        return sorted[min(max(index, 0), sorted.count - 1)]
     }
     
     func calculateSharpeRatio(returns: [Double], riskFreeRate: Double = 0.02) -> Double {
@@ -89,7 +92,7 @@ final class AnalyticsEngine: ObservableObject {
         for (index, price) in prices.enumerated() {
             let zScore = abs(price - mean) / max(stdDev, 0.001)
             if zScore > threshold {
-                found.append(Anomaly(index: index, price: price, zScore: zScore, type: zScore > 0 ? .spike : .drop))
+                found.append(Anomaly(index: index, price: price, zScore: zScore, type: price >= mean ? .spike : .drop))
             }
         }
         anomalies = found
@@ -97,6 +100,12 @@ final class AnalyticsEngine: ObservableObject {
     }
     
     func runStressTest(portfolio: Portfolio, scenarios: [StressScenario]) -> StressTestResult {
+        guard !scenarios.isEmpty else {
+            let fallback = StressScenario(name: "No scenario", description: "No stress scenarios configured", expectedLoss: 0, color: .stressGreen)
+            let result = StressTestResult(worstCase: StressScenarioResult(scenario: fallback, loss: 0, remainingBalance: portfolio.totalBalance), scenarios: [])
+            stressTestResults = result
+            return result
+        }
         let worstDrawdown = scenarios.map { scenario in
             let loss = portfolio.totalBalance * scenario.expectedLoss
             return StressScenarioResult(scenario: scenario, loss: loss, remainingBalance: portfolio.totalBalance - loss)
@@ -120,7 +129,7 @@ final class AnalyticsEngine: ObservableObject {
         return maxDD * 100
     }
     
-    private func randomNormal() -> Double {
+    private nonisolated static func randomNormal() -> Double {
         var u1 = Double.random(in: 0...1)
         var u2 = Double.random(in: 0...1)
         while u1 == 0 { u1 = Double.random(in: 0...1) }

@@ -104,7 +104,8 @@ struct TradingSignal: Identifiable, Codable {
         self.entryPrice = entryPrice
         self.stopLoss = stopLoss
         self.takeProfit = takeProfit
-        self.riskRewardRatio = abs((takeProfit - entryPrice) / (entryPrice - stopLoss))
+        let risk = abs(entryPrice - stopLoss)
+        self.riskRewardRatio = risk > .ulpOfOne ? abs(takeProfit - entryPrice) / risk : 0
         self.confidence = confidence
         self.timestamp = Date()
         self.indicators = indicators
@@ -126,8 +127,9 @@ struct Trade: Identifiable, Codable {
     var status: TradeStatus
     
     var pnlPercentage: Double? {
-        guard let exitPrice = exitPrice else { return nil }
-        return ((exitPrice - entryPrice) / entryPrice) * 100
+        guard let exitPrice, entryPrice > 0 else { return nil }
+        let direction = type == .sell ? -1.0 : 1.0
+        return (direction * (exitPrice - entryPrice) / entryPrice) * 100
     }
     
     enum TradeStatus: String, Codable {
