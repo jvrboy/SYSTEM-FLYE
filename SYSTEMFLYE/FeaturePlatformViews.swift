@@ -170,7 +170,7 @@ struct PlatformExpansionView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack { Text("LIVE BACKEND REPORT").font(.caption2.weight(.bold)).tracking(1.3); Spacer(); Text(report.bias.rawValue).font(.caption.weight(.bold)).foregroundStyle(report.bias == .buy ? .green : report.bias == .sell ? .orange : .secondary) }
                     Text(report.recommendation).font(.caption).foregroundStyle(.secondary)
-                    HStack { Text("Confidence \(Int(report.confidence * 100))%"); Spacer(); Text("ATR \(String(format: \"%.5f\", report.atr))"); Spacer(); Text("R:R 2.0") }.font(.caption2.monospacedDigit()).foregroundStyle(SystemFlyeTheme.cyan)
+                    HStack { Text("Confidence \(Int(report.confidence * 100))%"); Spacer(); Text(String(format: "ATR %.5f", report.atr)); Spacer(); Text("R:R 2.0") }.font(.caption2.monospacedDigit()).foregroundStyle(SystemFlyeTheme.cyan)
                 }
                 .padding(13).background(SystemFlyeTheme.panel, in: RoundedRectangle(cornerRadius: 14))
             }

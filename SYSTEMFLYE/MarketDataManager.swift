@@ -106,7 +106,7 @@ class MarketDataManager: ObservableObject {
             error = nil
         } catch {
             dataSource = "provider error"
-            error = "Live price refresh failed: \(error.localizedDescription)"
+            self.error = "Live price refresh failed: \(error.localizedDescription)"
         }
     }
 
