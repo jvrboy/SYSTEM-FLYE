@@ -73,6 +73,7 @@ struct BackendOperationsView: View {
 struct PlatformExpansionView: View {
     @EnvironmentObject private var platform: FeaturePlatformStore
     @EnvironmentObject private var marketDataManager: MarketDataManager
+    @EnvironmentObject private var forexBackend: ForexTradingBackend
     @State private var section = 0
     private let sections = ["Music", "Forex", "Technical", "Loop Lab", "Agents", "Skills", "Pipelines", "Fonts"]
 
@@ -156,6 +157,23 @@ struct PlatformExpansionView: View {
                     .buttonStyle(.borderedProminent).tint(SystemFlyeTheme.cyan).disabled(platform.isScanningForex)
             }
             if platform.isScanningForex { ProgressView(value: platform.forexScanProgress).tint(SystemFlyeTheme.cyan) }
+            HStack {
+                Text(forexBackend.isRunning ? "Backend pipeline running…" : "Backend pipeline ready").font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Button("Run EUR/USD pipeline") {
+                    guard let history = marketDataManager.priceHistory["EURUSD"], let basic = marketDataManager.technicalIndicators["EURUSD"], let advanced = marketDataManager.advancedTechnicalIndicators["EURUSD"] else { return }
+                    Task { _ = await forexBackend.runPipeline(pair: "EURUSD", history: history, basic: basic, advanced: advanced, accountBalance: 10_000) }
+                }
+                .buttonStyle(.borderedProminent).tint(SystemFlyeTheme.cyan).disabled(forexBackend.isRunning)
+            }
+            if let report = forexBackend.reports["EURUSD"] {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack { Text("LIVE BACKEND REPORT").font(.caption2.weight(.bold)).tracking(1.3); Spacer(); Text(report.bias.rawValue).font(.caption.weight(.bold)).foregroundStyle(report.bias == .buy ? .green : report.bias == .sell ? .orange : .secondary) }
+                    Text(report.recommendation).font(.caption).foregroundStyle(.secondary)
+                    HStack { Text("Confidence \(Int(report.confidence * 100))%"); Spacer(); Text("ATR \(String(format: \"%.5f\", report.atr))"); Spacer(); Text("R:R 2.0") }.font(.caption2.monospacedDigit()).foregroundStyle(SystemFlyeTheme.cyan)
+                }
+                .padding(13).background(SystemFlyeTheme.panel, in: RoundedRectangle(cornerRadius: 14))
+            }
             ForEach(platform.forexTools) { tool in
                 toolRow(icon: tool.icon, title: tool.name, subtitle: tool.subtitle, accent: tool.accent, selected: platform.selectedForexToolID == tool.id) {
                     platform.executeForexTool(tool.id)
@@ -194,6 +212,12 @@ struct PlatformExpansionView: View {
                     MetricTile(label: "ROC", value: String(format: "%.2f%%", values.roc), detail: "rate of change", tint: .orange)
                     MetricTile(label: "Signal", value: "\(Int(values.signalScore * 100))", detail: "composite score", tint: .yellow)
                     MetricTile(label: "Trend", value: String(format: "%.2f", values.trendStrength), detail: "directional bias", tint: .pink)
+                    MetricTile(label: "MFI", value: String(format: "%.1f", values.mfi), detail: "money flow index", tint: .mint)
+                    MetricTile(label: "Aroon", value: String(format: "%.0f/%.0f", values.aroonUp, values.aroonDown), detail: "up/down trend age", tint: .indigo)
+                    MetricTile(label: "TRIX", value: String(format: "%.3f", values.trix), detail: "triple EMA momentum", tint: .teal)
+                    MetricTile(label: "Channel", value: String(format: "%.5f", values.donchianUpper), detail: "Donchian upper", tint: .red)
+                    MetricTile(label: "SuperTrend", value: String(format: "%.5f", values.superTrend), detail: "ATR trend band", tint: .orange)
+                    MetricTile(label: "Squeeze", value: values.squeezeOn ? "ON" : "OFF", detail: "volatility compression", tint: values.squeezeOn ? .yellow : .secondary)
                 }
             }
         }

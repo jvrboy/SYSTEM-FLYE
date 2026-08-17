@@ -9,6 +9,8 @@ struct SYSTEMFLYEApp: App {
     @StateObject private var backendServiceManager = BackendServiceManager.shared
     @StateObject private var operationalBackend = OperationalBackendStore.shared
     @StateObject private var featurePlatform = FeaturePlatformStore.shared
+    @StateObject private var forexTradingBackend = ForexTradingBackend.shared
+    @StateObject private var apiClientManager = APIClientManager.shared
     @StateObject private var productionStore = ProductionStore()
     @State private var mode: FlyeMode = .intelligence
 
@@ -22,6 +24,8 @@ struct SYSTEMFLYEApp: App {
                 .environmentObject(backendServiceManager)
                 .environmentObject(operationalBackend)
                 .environmentObject(featurePlatform)
+                .environmentObject(forexTradingBackend)
+                .environmentObject(apiClientManager)
                 .environmentObject(productionStore)
                 .task {
                     operationalBackend.start()
@@ -122,5 +126,7 @@ enum FlyeTheme {
         .environmentObject(BackendServiceManager.shared)
         .environmentObject(OperationalBackendStore.shared)
         .environmentObject(FeaturePlatformStore.shared)
+        .environmentObject(ForexTradingBackend.shared)
+        .environmentObject(APIClientManager.shared)
         .environmentObject(ProductionStore())
 }

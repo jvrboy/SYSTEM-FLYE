@@ -25,8 +25,18 @@ struct AdvancedTechnicalIndicators: Codable, Equatable {
     let fibonacciRetracement618: Double
     let trendStrength: Double
     let signalScore: Double
+    let superTrend: Double
+    let mfi: Double
+    let trix: Double
+    let aroonUp: Double
+    let aroonDown: Double
+    let donchianUpper: Double
+    let donchianLower: Double
+    let trueRangePercent: Double
+    let heikinAshiClose: Double
+    let squeezeOn: Bool
 
-    static let empty = AdvancedTechnicalIndicators(adx: 0, plusDI: 0, minusDI: 0, cci: 0, williamsR: -50, roc: 0, obv: 0, vwap: 0, keltnerUpper: 0, keltnerMiddle: 0, keltnerLower: 0, ichimokuConversion: 0, ichimokuBase: 0, ichimokuLeadingA: 0, ichimokuLeadingB: 0, pivotPoint: 0, pivotR1: 0, pivotS1: 0, pivotR2: 0, pivotS2: 0, fibonacciRetracement382: 0, fibonacciRetracement618: 0, trendStrength: 0, signalScore: 0)
+    static let empty = AdvancedTechnicalIndicators(adx: 0, plusDI: 0, minusDI: 0, cci: 0, williamsR: -50, roc: 0, obv: 0, vwap: 0, keltnerUpper: 0, keltnerMiddle: 0, keltnerLower: 0, ichimokuConversion: 0, ichimokuBase: 0, ichimokuLeadingA: 0, ichimokuLeadingB: 0, pivotPoint: 0, pivotR1: 0, pivotS1: 0, pivotR2: 0, pivotS2: 0, fibonacciRetracement382: 0, fibonacciRetracement618: 0, trendStrength: 0, signalScore: 0, superTrend: 0, mfi: 50, trix: 0, aroonUp: 0, aroonDown: 0, donchianUpper: 0, donchianLower: 0, trueRangePercent: 0, heikinAshiClose: 0, squeezeOn: false)
 }
 
 enum AdvancedTechnicalAnalyzer {
@@ -94,8 +104,30 @@ enum AdvancedTechnicalAnalyzer {
         let fib618 = recentHigh - range * 0.618
         let trendStrength = min(1, max(-1, (plusDI - minusDI) / 100 + roc / 100))
         let signalScore = min(1, max(0, 0.5 + trendStrength * 0.35 + (cci / 300) * 0.15))
+        let superTrend = last >= keltnerMiddle ? keltnerLower : keltnerUpper
+        let moneyFlows = history.suffix(period).map { candle in
+            let typicalPrice = (candle.high + candle.low + candle.close) / 3
+            return (typicalPrice, typicalPrice >= keltnerMiddle ? Double(candle.volume) : -Double(candle.volume))
+        }
+        let positiveFlow = moneyFlows.filter { $0.1 > 0 }.map { $0.0 * $0.1 }.reduce(0, +)
+        let negativeFlow = abs(moneyFlows.filter { $0.1 < 0 }.map { $0.0 * $0.1 }.reduce(0, +))
+        let mfi = negativeFlow > 0 ? min(100, max(0, 100 - 100 / (1 + positiveFlow / negativeFlow))) : 50
+        let ema2 = exponentialMovingAverage(Array(closes.dropFirst()), period: 15)
+        let ema3 = exponentialMovingAverage(Array(closes.dropFirst(2)), period: 15)
+        let trix = ema3 != 0 ? (ema3 - ema2) / abs(ema2) * 100 : 0
+        let highWindow = Array(highs.suffix(period))
+        let lowWindow = Array(lows.suffix(period))
+        let highestIndex = highWindow.indices.max { highWindow[$0] < highWindow[$1] } ?? 0
+        let lowestIndex = lowWindow.indices.max { lowWindow[$0] < lowWindow[$1] } ?? 0
+        let aroonUp = Double(highestIndex + 1) / Double(period) * 100
+        let aroonDown = Double(lowestIndex + 1) / Double(period) * 100
+        let donchianUpper = highWindow.max() ?? last
+        let donchianLower = lowWindow.min() ?? last
+        let trueRangePercent = last > 0 ? atr / last * 100 : 0
+        let heikinAshiClose = history.suffix(3).map { ($0.open + $0.high + $0.low + $0.close) / 4 }.last ?? last
+        let squeezeOn = (keltnerUpper - keltnerLower) > 0 && (recentHigh - recentLow) < (keltnerUpper - keltnerLower)
 
-        return AdvancedTechnicalIndicators(adx: dx, plusDI: plusDI, minusDI: minusDI, cci: cci, williamsR: williamsR, roc: roc, obv: obv, vwap: vwap, keltnerUpper: keltnerUpper, keltnerMiddle: keltnerMiddle, keltnerLower: keltnerLower, ichimokuConversion: conversion, ichimokuBase: base, ichimokuLeadingA: leadingA, ichimokuLeadingB: leadingB, pivotPoint: pivot, pivotR1: pivotR1, pivotS1: pivotS1, pivotR2: pivotR2, pivotS2: pivotS2, fibonacciRetracement382: fib382, fibonacciRetracement618: fib618, trendStrength: trendStrength, signalScore: signalScore)
+        return AdvancedTechnicalIndicators(adx: dx, plusDI: plusDI, minusDI: minusDI, cci: cci, williamsR: williamsR, roc: roc, obv: obv, vwap: vwap, keltnerUpper: keltnerUpper, keltnerMiddle: keltnerMiddle, keltnerLower: keltnerLower, ichimokuConversion: conversion, ichimokuBase: base, ichimokuLeadingA: leadingA, ichimokuLeadingB: leadingB, pivotPoint: pivot, pivotR1: pivotR1, pivotS1: pivotS1, pivotR2: pivotR2, pivotS2: pivotS2, fibonacciRetracement382: fib382, fibonacciRetracement618: fib618, trendStrength: trendStrength, signalScore: signalScore, superTrend: superTrend, mfi: mfi, trix: trix, aroonUp: aroonUp, aroonDown: aroonDown, donchianUpper: donchianUpper, donchianLower: donchianLower, trueRangePercent: trueRangePercent, heikinAshiClose: heikinAshiClose, squeezeOn: squeezeOn)
     }
 
     private static func average(_ values: [Double]) -> Double {

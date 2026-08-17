@@ -11,8 +11,10 @@ class MarketDataManager: ObservableObject {
     @Published var isLoading = false
     @Published var error: String?
     @Published var selectedPairs: [String] = ["EURUSD", "GBPUSD", "USDJPY"]
+    @Published private(set) var dataSource = "offline sample"
     
     private var cancellables = Set<AnyCancellable>()
+    private let apiClient = APIClientManager.shared
     private let updateTimer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
     
     // MARK: - Popular Forex Pairs
@@ -45,7 +47,11 @@ class MarketDataManager: ObservableObject {
     
     // MARK: - Data Updates
     func updatePrices() {
-        // Simulate real-time price updates
+        if apiClient.provider != nil {
+            Task { await refreshLivePrices() }
+            return
+        }
+        dataSource = "offline sample"
         for pair in selectedPairs {
             if let currentPrice = currentPrices[pair] {
                 let change = Double.random(in: -0.005...0.005)
@@ -83,6 +89,35 @@ class MarketDataManager: ObservableObject {
         }
     }
     
+    func refreshLivePrices() async {
+        guard let provider = apiClient.provider else { return }
+        do {
+            let prices = try await provider.fetchPrices(for: selectedPairs)
+            dataSource = "live provider"
+            for pair in selectedPairs {
+                guard let newPrice = prices[pair], newPrice > 0 else { continue }
+                let previous = currentPrices[pair] ?? newPrice
+                currentPrices[pair] = newPrice
+                let candle = PriceData(id: "\(pair)-\(Date().timeIntervalSince1970)", timestamp: Date(), open: previous, high: max(previous, newPrice), low: min(previous, newPrice), close: newPrice, volume: priceHistory[pair]?.last?.volume ?? 0)
+                priceHistory[pair, default: []].append(candle)
+                if priceHistory[pair, default: []].count > 1000 { priceHistory[pair]?.removeFirst() }
+                recalculate(pair: pair)
+            }
+            error = nil
+        } catch {
+            dataSource = "provider error"
+            error = "Live price refresh failed: \(error.localizedDescription)"
+        }
+    }
+
+    private func recalculate(pair: String) {
+        guard let history = priceHistory[pair], history.count > 20 else { return }
+        let basic = calculateIndicators(for: history)
+        technicalIndicators[pair] = basic
+        advancedTechnicalIndicators[pair] = AdvancedTechnicalAnalyzer.calculate(history: history)
+        marketAnalysis[pair] = analyzeMarket(history: history, indicators: basic)
+    }
+
     func fetchHistoricalData(for pair: String, timeframe: HistoricalDataRequest.Timeframe) async {
         isLoading = true
         defer { isLoading = false }
@@ -93,8 +128,18 @@ class MarketDataManager: ObservableObject {
         // - Forex Factory API
         
         do {
-            // Simulate API call
-            try await Task.sleep(nanoseconds: 500_000_000)
+            if let provider = apiClient.provider {
+                let history = try await provider.fetchHistoricalData(pair: pair, timeframe: timeframe.rawValue, limit: 500)
+                guard !history.isEmpty else { throw APIError.invalidResponse }
+                dataSource = "live provider"
+                priceHistory[pair] = history
+                currentPrices[pair] = history.last?.close
+                recalculate(pair: pair)
+                error = nil
+                return
+            }
+            dataSource = "offline sample"
+            try await Task.sleep(nanoseconds: 150_000_000)
             
             var history: [PriceData] = []
             var currentPrice = currentPrices[pair] ?? 1.0
@@ -120,10 +165,7 @@ class MarketDataManager: ObservableObject {
             }
             
             priceHistory[pair] = history
-            if history.count > 20 {
-                technicalIndicators[pair] = calculateIndicators(for: history)
-                marketAnalysis[pair] = analyzeMarket(history: history, indicators: technicalIndicators[pair]!)
-            }
+            recalculate(pair: pair)
         } catch {
             self.error = "Failed to fetch historical data: \(error.localizedDescription)"
         }

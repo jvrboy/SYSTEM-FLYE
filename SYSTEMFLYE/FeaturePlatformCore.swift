@@ -125,7 +125,11 @@ final class FeaturePlatformStore: ObservableObject {
         .init(id: "volatility-suite", name: "Volatility Suite", subtitle: "ATR, Keltner channels, and squeeze state", icon: "waveform.path.ecg", accent: .orange),
         .init(id: "structure-suite", name: "Structure Suite", subtitle: "Pivot points, Fibonacci, and swing levels", icon: "chart.xyaxis.line", accent: .purple),
         .init(id: "ichimoku-suite", name: "Cloud Suite", subtitle: "Ichimoku conversion, base, and cloud", icon: "cloud.sun.fill", accent: .pink),
-        .init(id: "momentum-suite", name: "Momentum Suite", subtitle: "CCI, Williams %R, and signal score", icon: "gauge.with.dots.needle.67percent", accent: .yellow)
+        .init(id: "momentum-suite", name: "Momentum Suite", subtitle: "CCI, Williams %R, and signal score", icon: "gauge.with.dots.needle.67percent", accent: .yellow),
+        .init(id: "supertrend-suite", name: "SuperTrend Suite", subtitle: "ATR trend bands and regime flips", icon: "arrow.triangle.2.circlepath", accent: .teal),
+        .init(id: "money-flow-suite", name: "Money Flow Suite", subtitle: "MFI and volume pressure", icon: "banknote.fill", accent: .mint),
+        .init(id: "aroon-suite", name: "Aroon Suite", subtitle: "Trend age and directional dominance", icon: "clock.arrow.2.circlepath", accent: .indigo),
+        .init(id: "donchian-suite", name: "Donchian Suite", subtitle: "Breakout channels and squeeze state", icon: "rectangle.split.3x1.fill", accent: .red)
     ]
 
     @Published var loopTools: [LoopToolDefinition] = [

@@ -333,6 +333,7 @@ struct TwelveDataTimeSeriesResponse: Codable {
 // MARK: - API Client Manager
 @MainActor
 class APIClientManager: ObservableObject {
+    static let shared = APIClientManager()
     @Published var provider: ForexAPIProvider?
     @Published var error: APIError?
     @Published var isConnected = false
