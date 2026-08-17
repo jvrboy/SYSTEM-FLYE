@@ -141,13 +141,13 @@ class ImageToAudioConverter {
     }
     
     private func rgbToHueSaturation(r: Float, g: Float, b: Float) -> (hue: Float, saturation: Float) {
-        let max = max(r, g, b)
-        let min = min(r, g, b)
-        let delta = max - min
+        let maxValue = Swift.max(r, g, b)
+        let minValue = Swift.min(r, g, b)
+        let delta = maxValue - minValue
         
         var hue: Float = 0
         if delta > 0 {
-            if max == r {
+            if maxValue == r {
                 hue = fmod((g - b) / delta, 6) / 6
             } else if max == g {
                 hue = ((b - r) / delta + 2) / 6
@@ -156,9 +156,9 @@ class ImageToAudioConverter {
             }
         }
         
-        let saturation = max > 0 ? delta / max : 0
+        let saturation = maxValue > 0 ? delta / maxValue : 0
         
-        return (max(0, hue), saturation)
+        return (Swift.max(0, hue), saturation)
     }
     
     // MARK: - Audio Generation

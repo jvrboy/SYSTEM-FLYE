@@ -21,11 +21,11 @@ struct SoundLabView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Advanced Sound Designer")
                         .font(.system(size: 28, weight: .bold, design: .default))
-                        .foreground(Color.white)
+                        .foregroundStyle(Color.white)
                     
                     Text("Professional granular synthesis & image-to-audio conversion")
                         .font(.system(size: 13, weight: .regular))
-                        .foreground(Color.white.opacity(0.6))
+                        .foregroundStyle(Color.white.opacity(0.6))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(20)

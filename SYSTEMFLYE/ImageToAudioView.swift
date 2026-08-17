@@ -38,15 +38,15 @@ struct ImageToAudioView: View {
                         VStack(spacing: 16) {
                             Image(systemName: "photo.badge.plus")
                                 .font(.system(size: 40))
-                                .foreground(Color(red: 0.4, green: 0.8, blue: 1.0))
+                                .foregroundStyle(Color(red: 0.4, green: 0.8, blue: 1.0))
                             
                             Text("Select or capture an image")
                                 .font(.system(size: 16, weight: .semibold))
-                                .foreground(.white)
+                                .foregroundStyle(.white)
                             
                             Text("Your image will be analyzed and converted to audio")
                                 .font(.system(size: 13))
-                                .foreground(.white.opacity(0.6))
+                                .foregroundStyle(.white.opacity(0.6))
                         }
                         .frame(height: 200)
                         .frame(maxWidth: .infinity)
@@ -113,7 +113,7 @@ struct ImageToAudioView: View {
                         Text("Sound Mapping")
                             .font(.system(size: 16, weight: .semibold))
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .foreground(.white)
+                            .foregroundStyle(.white)
                         
                         Toggle("Brightness → Amplitude", isOn: $viewModel.brightnessToAmplitude)
                             .tint(Color(red: 0.4, green: 0.8, blue: 1.0))
@@ -127,7 +127,7 @@ struct ImageToAudioView: View {
                         Toggle("Texture → Grain", isOn: $viewModel.textureGraininess)
                             .tint(Color(red: 0.4, green: 0.8, blue: 1.0))
                     }
-                    .foreground(.white)
+                    .foregroundStyle(.white)
                     .padding(16)
                     .background(
                         RoundedRectangle(cornerRadius: 16)
@@ -139,7 +139,7 @@ struct ImageToAudioView: View {
                         Text("Audio Settings")
                             .font(.system(size: 16, weight: .semibold))
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .foreground(.white)
+                            .foregroundStyle(.white)
                         
                         ParameterSlider(
                             label: "Base Frequency",
@@ -167,7 +167,7 @@ struct ImageToAudioView: View {
                             value: $viewModel.harmonics,
                             in: 1...16
                         )
-                        .foreground(.white)
+                        .foregroundStyle(.white)
                     }
                     .padding(16)
                     .background(

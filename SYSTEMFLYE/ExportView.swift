@@ -17,7 +17,7 @@ struct ExportView: View {
                         Text("Filename")
                             .font(.system(size: 16, weight: .semibold))
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .foreground(.white)
+                            .foregroundStyle(.white)
                         
                         TextField("Enter filename", text: $exportFilename)
                             .textFieldStyle(.roundedBorder)
@@ -38,7 +38,7 @@ struct ExportView: View {
                         Text("Export Format")
                             .font(.system(size: 16, weight: .semibold))
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .foreground(.white)
+                            .foregroundStyle(.white)
                         
                         VStack(spacing: 8) {
                             ForEach(AudioFileManager.AudioFormat.allCases, id: \.self) { format in
@@ -64,7 +64,7 @@ struct ExportView: View {
                             Text("Format Information")
                                 .font(.system(size: 16, weight: .semibold))
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .foreground(.white)
+                                .foregroundStyle(.white)
                             
                             FormatInfoCard(
                                 title: "File Type",
@@ -93,7 +93,7 @@ struct ExportView: View {
                         Text("Advanced Options")
                             .font(.system(size: 16, weight: .semibold))
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .foreground(.white)
+                            .foregroundStyle(.white)
                         
                         Toggle("Normalize Audio", isOn: $viewModel.normalizeAudio)
                             .tint(Color(red: 0.4, green: 0.8, blue: 1.0))
@@ -104,7 +104,7 @@ struct ExportView: View {
                         Toggle("Apply Compression", isOn: $viewModel.applyCompression)
                             .tint(Color(red: 0.4, green: 0.8, blue: 1.0))
                     }
-                    .foreground(.white)
+                    .foregroundStyle(.white)
                     .padding(16)
                     .background(
                         RoundedRectangle(cornerRadius: 16)
@@ -153,7 +153,7 @@ struct ExportView: View {
                             Text("Recent Exports")
                                 .font(.system(size: 16, weight: .semibold))
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .foreground(.white)
+                                .foregroundStyle(.white)
                             
                             VStack(spacing: 8) {
                                 ForEach(viewModel.recentExports.prefix(5), id: \.self) { url in
@@ -161,11 +161,11 @@ struct ExportView: View {
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text(url.lastPathComponent)
                                                 .font(.system(size: 14, weight: .semibold))
-                                                .foreground(.white)
+                                                .foregroundStyle(.white)
                                             
                                             Text(url.pathExtension.uppercased())
                                                 .font(.system(size: 12))
-                                                .foreground(.white.opacity(0.6))
+                                                .foregroundStyle(.white.opacity(0.6))
                                         }
                                         
                                         Spacer()
@@ -259,13 +259,13 @@ struct FormatInfoCard: View {
         HStack {
             Text(title)
                 .font(.system(size: 13))
-                .foreground(.white.opacity(0.6))
+                .foregroundStyle(.white.opacity(0.6))
             
             Spacer()
             
             Text(value)
                 .font(.system(size: 13, weight: .semibold))
-                .foreground(Color(red: 0.4, green: 0.8, blue: 1.0))
+                .foregroundStyle(Color(red: 0.4, green: 0.8, blue: 1.0))
         }
         .padding(12)
         .background(Color(red: 0.08, green: 0.08, blue: 0.12))

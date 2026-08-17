@@ -198,16 +198,16 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
     }
     
     private func performFFT(_ samples: UnsafeMutablePointer<Float>, frameLength: Int) {
-        var realParts = [Float](samples, count: frameLength)
+        var realParts = Array(UnsafeBufferPointer(start: samples, count: frameLength))
         var imaginaryParts = [Float](repeating: 0, count: frameLength)
-        
-        var complexSplitData = DSPSplitComplex(
-            realp: &realParts,
-            imagp: &imaginaryParts
-        )
-        
-        guard let log2n = Int(exactly: log2(Double(frameLength))) else { return }
-        guard let fftSetup = vDSP_create_fftsetup(vDSP_Length(log2n), kFFTRadix2) else { return }
+        var log2n = 0
+        var value = frameLength
+        while value > 1 { value /= 2; log2n += 1 }
+        guard (1 << log2n) == frameLength else { return }
+        guard let fftSetup = vDSP_create_fftsetup(vDSP_Length(log2n), FFTRadix(kFFTRadix2)) else { return }
+        realParts.withUnsafeMutableBufferPointer { realBuffer in
+            imaginaryParts.withUnsafeMutableBufferPointer { imaginaryBuffer in
+                var complexSplitData = DSPSplitComplex(realp: realBuffer.baseAddress!, imagp: imaginaryBuffer.baseAddress!)
         
         vDSP_fft_zip(
             fftSetup,
@@ -239,8 +239,11 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
             }
         }
         
-        DispatchQueue.main.async {
-            self.frequencyData = frequencyBins
+                DispatchQueue.main.async {
+                    self.frequencyData = frequencyBins
+                }
+            }
         }
+        vDSP_destroy_fftsetup(fftSetup)
     }
 }

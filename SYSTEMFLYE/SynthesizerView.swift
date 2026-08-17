@@ -90,7 +90,7 @@ struct SynthesizerView: View {
                         Text("LFO Modulation")
                             .font(.system(size: 16, weight: .semibold))
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .foreground(.white)
+                            .foregroundStyle(.white)
                         
                         ParameterSlider(
                             label: "LFO Rate",
@@ -126,7 +126,7 @@ struct SynthesizerView: View {
                         Text("Window Function")
                             .font(.system(size: 16, weight: .semibold))
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .foreground(.white)
+                            .foregroundStyle(.white)
                         
                         HStack(spacing: 8) {
                             ForEach(["Hann", "Hamming", "Blackman", "Triangle"], id: \.self) { window in
@@ -143,7 +143,7 @@ struct SynthesizerView: View {
                                                     Color(red: 0.15, green: 0.15, blue: 0.2)
                                                 )
                                         )
-                                        .foreground(
+                                        .foregroundStyle(
                                             synthesizer.windowType == window.lowercased() ?
                                             Color.black : Color.white
                                         )
@@ -205,13 +205,13 @@ struct ParameterSlider: View {
             HStack {
                 Text(label)
                     .font(.system(size: 14, weight: .medium))
-                    .foreground(.white)
+                    .foregroundStyle(.white)
                 
                 Spacer()
                 
                 Text(String(format: "%.1f", value) + (unit.isEmpty ? "" : " \(unit)"))
                     .font(.system(size: 13, weight: .semibold))
-                    .foreground(Color(red: 0.4, green: 0.8, blue: 1.0))
+                    .foregroundStyle(Color(red: 0.4, green: 0.8, blue: 1.0))
             }
             
             Slider(value: $value, in: range)

@@ -99,8 +99,9 @@ actor LocalRepository {
         try ensureDirectory()
         var events = (try? loadAudit()) ?? []
         events.insert(event, at: 0)
-        let data = try JSONEncoder.flye.encode(events.prefix(300))
-        try data.write(to: fileURL("audit.json"), options: .atomic)
+        let limitedEvents = Array(events.prefix(300))
+        let data = try JSONEncoder.flye.encode(limitedEvents)
+        try data.write(to: fileURL("audit.json"), options: Data.WritingOptions.atomic)
     }
 
     func loadAudit() throws -> [AuditEvent] {

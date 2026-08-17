@@ -36,17 +36,17 @@ struct FileManagerView: View {
                         VStack(spacing: 16) {
                             Image(systemName: viewModel.activeTab == 0 ? "waveform" : "doc.text")
                                 .font(.system(size: 48))
-                                .foreground(Color.white.opacity(0.3))
+                                .foregroundStyle(Color.white.opacity(0.3))
                             
                             Text(viewModel.activeTab == 0 ? "No sounds yet" : "No exports yet")
                                 .font(.system(size: 16, weight: .semibold))
-                                .foreground(.white)
+                                .foregroundStyle(.white)
                             
                             Text(viewModel.activeTab == 0 ?
                                  "Save audio from the synthesizer" :
                                  "Export audio to create files")
                                 .font(.system(size: 13))
-                                .foreground(.white.opacity(0.6))
+                                .foregroundStyle(.white.opacity(0.6))
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .padding()

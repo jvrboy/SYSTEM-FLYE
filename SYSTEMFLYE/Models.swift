@@ -118,11 +118,11 @@ struct Trade: Identifiable, Codable {
     let pairSymbol: String
     let type: SignalType
     let entryPrice: Double
-    let exitPrice: Double?
+    var exitPrice: Double?
     let quantity: Double
     let entryDate: Date
-    let exitDate: Date?
-    let profitLoss: Double?
+    var exitDate: Date?
+    var profitLoss: Double?
     var status: TradeStatus
     
     var pnlPercentage: Double? {
