@@ -5,7 +5,7 @@ struct DashboardView: View {
     @EnvironmentObject var signalGenerator: SignalGenerator
     
     var body: some View {
-        NavigationStack {
+        AnyView(NavigationStack {
             ScrollView {
                 VStack(spacing: 0) {
                     // Header
@@ -151,7 +151,7 @@ struct DashboardView: View {
             }
             .background(Color(UIColor(red: 0.08, green: 0.08, blue: 0.1, alpha: 1)))
             .navigationTitle("Forex Analyzer")
-        }
+        })
     }
 }
 

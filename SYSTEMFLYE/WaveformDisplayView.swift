@@ -6,14 +6,10 @@ struct WaveformDisplayView: View {
     var body: some View {
         Canvas { context, size in
             // Background gradient
-            let gradient = LinearGradient(
-                gradient: Gradient(colors: [
+            let gradient = Gradient(colors: [
                     Color(red: 0.08, green: 0.2, blue: 0.3),
                     Color(red: 0.05, green: 0.15, blue: 0.25)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            ])
             
             context.fill(
                 Path(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: 12),
@@ -121,14 +117,10 @@ struct FrequencySpectrumView: View {
     
     var body: some View {
         Canvas { context, size in
-            let gradient = LinearGradient(
-                gradient: Gradient(colors: [
+            let gradient = Gradient(colors: [
                     Color(red: 0.08, green: 0.2, blue: 0.3),
                     Color(red: 0.05, green: 0.15, blue: 0.25)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            ])
             
             context.fill(
                 Path(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: 12),
@@ -144,8 +136,7 @@ struct FrequencySpectrumView: View {
                 let y = size.height - barHeight - 10
                 
                 // Create gradient for each bar
-                let barGradient = LinearGradient(
-                    gradient: Gradient(colors: [
+                let barGradient = Gradient(colors: [
                         Color(
                             red: 0.2 + CGFloat(index) / CGFloat(frequencyData.count) * 0.8,
                             green: 0.6,
@@ -156,10 +147,7 @@ struct FrequencySpectrumView: View {
                             green: 0.4,
                             blue: 0.8
                         )
-                    ]),
-                    startPoint: .bottom,
-                    endPoint: .top
-                )
+                    ])
                 
                 let barRect = RoundedRectangle(
                     cornerRadius: 2,
