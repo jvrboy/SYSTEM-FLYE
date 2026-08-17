@@ -72,8 +72,9 @@ struct BackendOperationsView: View {
 
 struct PlatformExpansionView: View {
     @EnvironmentObject private var platform: FeaturePlatformStore
+    @EnvironmentObject private var marketDataManager: MarketDataManager
     @State private var section = 0
-    private let sections = ["Music", "Forex", "Agents", "Skills", "Pipelines", "Fonts"]
+    private let sections = ["Music", "Forex", "Technical", "Loop Lab", "Agents", "Skills", "Pipelines", "Fonts"]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -97,9 +98,11 @@ struct PlatformExpansionView: View {
                 switch section {
                 case 0: musicTools
                 case 1: forexTools
-                case 2: agents
-                case 3: skills
-                case 4: pipelines
+                case 2: technicalTools
+                case 3: loopTools
+                case 4: agents
+                case 5: skills
+                case 6: pipelines
                 default: fonts
                 }
             }
@@ -170,6 +173,53 @@ struct PlatformExpansionView: View {
                     }
                     ProgressView(value: item.score).tint(item.direction == "SHORT" ? .orange : SystemFlyeTheme.cyan)
                 }
+            }
+            .padding(16).background(SystemFlyeTheme.panel, in: RoundedRectangle(cornerRadius: 16))
+        }
+    }
+
+    private var technicalTools: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("ADVANCED TECHNICAL ANALYSIS").font(.caption2.weight(.bold)).tracking(1.5).foregroundStyle(.secondary)
+            ForEach(platform.technicalTools) { tool in
+                toolRow(icon: tool.icon, title: tool.name, subtitle: tool.subtitle, accent: tool.accent, selected: platform.selectedTechnicalToolID == tool.id) {
+                    platform.executeTechnicalTool(tool.id)
+                }
+            }
+            if let values = marketDataManager.advancedTechnicalIndicators["EURUSD"] {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                    MetricTile(label: "ADX", value: String(format: "%.1f", values.adx), detail: "trend strength", tint: .cyan)
+                    MetricTile(label: "CCI", value: String(format: "%.1f", values.cci), detail: "cycle momentum", tint: .purple)
+                    MetricTile(label: "VWAP", value: String(format: "%.5f", values.vwap), detail: "volume weighted", tint: .green)
+                    MetricTile(label: "ROC", value: String(format: "%.2f%%", values.roc), detail: "rate of change", tint: .orange)
+                    MetricTile(label: "Signal", value: "\(Int(values.signalScore * 100))", detail: "composite score", tint: .yellow)
+                    MetricTile(label: "Trend", value: String(format: "%.2f", values.trendStrength), detail: "directional bias", tint: .pink)
+                }
+            }
+        }
+    }
+
+    private var loopTools: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("LOOP RESHAPING LAB").font(.caption2.weight(.bold)).tracking(1.5).foregroundStyle(.secondary)
+            ForEach(platform.loopTools) { tool in
+                toolRow(icon: tool.icon, title: tool.name, subtitle: tool.subtitle, accent: tool.accent, selected: platform.selectedLoopToolID == tool.id) {
+                    platform.executeLoopTool(tool.id)
+                }
+            }
+            VStack(alignment: .leading, spacing: 10) {
+                HStack { Text("RESHAPE PREVIEW").font(.caption2.weight(.bold)).tracking(1.3); Spacer(); Label("NON-DESTRUCTIVE", systemImage: "lock.fill").font(.caption2).foregroundStyle(.green) }
+                HStack(alignment: .center, spacing: 3) {
+                    ForEach(Array(stride(from: 0, to: platform.loopPreview.count, by: max(1, platform.loopPreview.count / 32))), id: \.self) { index in
+                        RoundedRectangle(cornerRadius: 2).fill(index % 5 == 0 ? SystemFlyeTheme.cyan : SystemFlyeTheme.violet.opacity(0.55)).frame(maxWidth: .infinity).frame(height: CGFloat(12 + abs(platform.loopPreview[index]) * 34))
+                    }
+                }
+                HStack {
+                    Text("\(platform.loopPreview.count) samples  ·  \(platform.loopTransientCount) transients").font(.caption).foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Process loop") { platform.processLoopTool() }.buttonStyle(.borderedProminent).tint(SystemFlyeTheme.cyan)
+                }
+                Text("Slice, stretch, reverse, stutter, shuffle, and freeze operations are staged for export-safe loop editing.").font(.caption).foregroundStyle(.secondary)
             }
             .padding(16).background(SystemFlyeTheme.panel, in: RoundedRectangle(cornerRadius: 16))
         }

@@ -6,6 +6,7 @@ class MarketDataManager: ObservableObject {
     @Published var currentPrices: [String: Double] = [:]
     @Published var priceHistory: [String: [PriceData]] = [:]
     @Published var technicalIndicators: [String: TechnicalIndicators] = [:]
+    @Published var advancedTechnicalIndicators: [String: AdvancedTechnicalIndicators] = [:]
     @Published var marketAnalysis: [String: MarketAnalysis] = [:]
     @Published var isLoading = false
     @Published var error: String?
@@ -75,6 +76,7 @@ class MarketDataManager: ObservableObject {
                 // Calculate technical indicators
                 if let history = priceHistory[pair], history.count > 20 {
                     technicalIndicators[pair] = calculateIndicators(for: history)
+                    advancedTechnicalIndicators[pair] = AdvancedTechnicalAnalyzer.calculate(history: history)
                     marketAnalysis[pair] = analyzeMarket(history: history, indicators: technicalIndicators[pair]!)
                 }
             }
@@ -375,6 +377,7 @@ class MarketDataManager: ObservableObject {
             
             priceHistory[pair] = history
             technicalIndicators[pair] = calculateIndicators(for: history)
+            advancedTechnicalIndicators[pair] = AdvancedTechnicalAnalyzer.calculate(history: history)
             marketAnalysis[pair] = analyzeMarket(history: history, indicators: technicalIndicators[pair]!)
         }
     }

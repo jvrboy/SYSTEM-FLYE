@@ -41,6 +41,22 @@ struct ForexToolDefinition: Identifiable, Hashable {
     }
 }
 
+struct TechnicalToolDefinition: Identifiable, Hashable {
+    let id: String
+    let name: String
+    let subtitle: String
+    let icon: String
+    let accent: Color
+}
+
+struct LoopToolDefinition: Identifiable, Hashable {
+    let id: String
+    let name: String
+    let subtitle: String
+    let icon: String
+    let accent: Color
+}
+
 struct ForexWatchItem: Identifiable, Hashable {
     let id: String
     let symbol: String
@@ -103,6 +119,24 @@ final class FeaturePlatformStore: ObservableObject {
         .init(id: "scene", name: "Scene Composer", subtitle: "Save and morph complete setups", icon: "square.stack.3d.up.fill", accent: .yellow, capability: .scene)
     ]
 
+    @Published var technicalTools: [TechnicalToolDefinition] = [
+        .init(id: "trend-suite", name: "Trend Suite", subtitle: "ADX, DI spread, ROC, and trend strength", icon: "chart.line.uptrend.xyaxis", accent: .cyan),
+        .init(id: "volume-suite", name: "Volume Suite", subtitle: "OBV, VWAP, volume pressure, and flow", icon: "chart.bar.xaxis", accent: .green),
+        .init(id: "volatility-suite", name: "Volatility Suite", subtitle: "ATR, Keltner channels, and squeeze state", icon: "waveform.path.ecg", accent: .orange),
+        .init(id: "structure-suite", name: "Structure Suite", subtitle: "Pivot points, Fibonacci, and swing levels", icon: "chart.xyaxis.line", accent: .purple),
+        .init(id: "ichimoku-suite", name: "Cloud Suite", subtitle: "Ichimoku conversion, base, and cloud", icon: "cloud.sun.fill", accent: .pink),
+        .init(id: "momentum-suite", name: "Momentum Suite", subtitle: "CCI, Williams %R, and signal score", icon: "gauge.with.dots.needle.67percent", accent: .yellow)
+    ]
+
+    @Published var loopTools: [LoopToolDefinition] = [
+        .init(id: "slice", name: "Transient Slicer", subtitle: "Detect and re-grid transient slices", icon: "scissors", accent: .cyan),
+        .init(id: "stretch", name: "Elastic Time", subtitle: "Time-stretch with preserve-pitch control", icon: "arrow.left.and.right.text.vertical", accent: .purple),
+        .init(id: "reverse", name: "Reverse Morph", subtitle: "Reverse grains and crossfade the seam", icon: "arrow.uturn.backward.circle", accent: .orange),
+        .init(id: "stutter", name: "Stutter Grid", subtitle: "Create repeat, gate, and retrigger patterns", icon: "repeat.1", accent: .green),
+        .init(id: "shuffle", name: "Probability Shuffle", subtitle: "Reorder slices with deterministic seeds", icon: "dice", accent: .pink),
+        .init(id: "freeze", name: "Spectral Freeze", subtitle: "Freeze a tonal frame and morph its tail", icon: "snowflake", accent: .yellow)
+    ]
+
     @Published var forexTools: [ForexToolDefinition] = [
         .init(id: "regime", name: "Regime Detection", subtitle: "Trend, range, and transition scoring", icon: "chart.xyaxis.line", accent: .cyan, capability: .regime),
         .init(id: "correlation", name: "Correlation Matrix", subtitle: "Cross-pair relationship map", icon: "square.grid.3x3.topleft.filled", accent: .purple, capability: .correlation),
@@ -149,11 +183,15 @@ final class FeaturePlatformStore: ObservableObject {
 
     @Published var selectedMusicToolID = "spectral"
     @Published var selectedForexToolID = "regime"
+    @Published var selectedTechnicalToolID = "trend-suite"
+    @Published var selectedLoopToolID = "slice"
     @Published var lastAction = "System ready"
     @Published var musicRenderProgress = 0.0
     @Published var forexScanProgress = 0.0
     @Published var isRenderingMusic = false
     @Published var isScanningForex = false
+    @Published var loopPreview: [Float] = (0..<512).map { index in Float(sin(Double(index) * 0.12) * (0.45 + 0.35 * sin(Double(index) * 0.031))) }
+    @Published var loopTransientCount = 0
 
     func runAgent(_ id: String) {
         guard let index = agents.firstIndex(where: { $0.id == id }), agents[index].status != .running else { return }
@@ -197,6 +235,32 @@ final class FeaturePlatformStore: ObservableObject {
         selectedMusicToolID = id
         let tool = musicTools.first { $0.id == id }
         lastAction = "Loaded \(tool?.name ?? "music tool")"
+    }
+
+    func executeTechnicalTool(_ id: String) {
+        selectedTechnicalToolID = id
+        lastAction = "Loaded \(technicalTools.first { $0.id == id }?.name ?? "technical tool")"
+    }
+
+    func executeLoopTool(_ id: String) {
+        selectedLoopToolID = id
+        lastAction = "Loaded \(loopTools.first { $0.id == id }?.name ?? "loop tool")"
+    }
+
+    func processLoopTool() {
+        let operation: String
+        switch selectedLoopToolID {
+        case "stretch": operation = "stretch"
+        case "reverse": operation = "reverse"
+        case "stutter": operation = "stutter"
+        case "shuffle": operation = "shuffle"
+        case "freeze": operation = "freeze"
+        default: operation = "slice"
+        }
+        let result = LoopReshapingEngine.process(samples: loopPreview, operation: operation, amount: 0.55)
+        loopPreview = result.samples
+        loopTransientCount = result.detectedTransients.count
+        lastAction = "\(result.operation.capitalized) processed \(result.samples.count) samples"
     }
 
     func executeForexTool(_ id: String) {
