@@ -97,7 +97,7 @@ final class NewsSentimentService: ObservableObject {
 
     private static func parse(date: String?) -> Date? {
         guard let date, date.count >= 14 else { return nil }
-        let formatter = DateFormatter()
+        let formatter = Foundation.DateFormatter()
         formatter.dateFormat = "yyyyMMddHHmmss"
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
         return formatter.date(from: String(date.prefix(14)))
