@@ -138,7 +138,11 @@ final class MetricsCollector: ObservableObject {
     
     func record(success: Bool, latency: TimeInterval) {
         requestCount += 1
-        success ? successCount += 1 : failureCount += 1
+        if success {
+            successCount += 1
+        } else {
+            failureCount += 1
+        }
         lastLatencies.append(latency)
         if lastLatencies.count > maxLatencies { lastLatencies.removeFirst() }
         averageLatency = lastLatencies.reduce(0, +) / Double(lastLatencies.count)
@@ -188,7 +192,6 @@ struct LoggingInterceptor: RequestInterceptor {
 }
 
 final class MetricsInterceptor: RequestInterceptor {
-    let collector = MetricsCollector.shared
     private var startTime: Date?
     
     func intercept(request: URLRequest) async -> URLRequest {
@@ -197,7 +200,10 @@ final class MetricsInterceptor: RequestInterceptor {
     }
     func intercept(response: (data: Data, response: HTTPURLResponse), for request: URLRequest) async -> (data: Data, response: HTTPURLResponse) {
         let latency = startTime.map { Date().timeIntervalSince($0) } ?? 0
-        collector.record(success: 200...299 ~= response.response.statusCode, latency: latency)
+        let success = 200...299 ~= response.response.statusCode
+        Task { @MainActor in
+            MetricsCollector.shared.record(success: success, latency: latency)
+        }
         return response
     }
 }
@@ -214,7 +220,7 @@ actor BackgroundSyncScheduler {
     func cancel(id: String) { tasks.removeValue(forKey: id) }
     
     func runAll() async {
-        for (id, item) in tasks { await item.task() }
+        for item in tasks.values { await item.task() }
     }
 }
 

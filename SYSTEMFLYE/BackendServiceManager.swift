@@ -45,7 +45,9 @@ final class BackendServiceManager: ObservableObject {
         healthTimer = Timer.scheduledTimer(withTimeInterval: healthCheckInterval, repeats: true) { [weak self] _ in
             Task { await self?.performHealthChecks() }
         }
-        performHealthChecks()
+        Task { [weak self] in
+            await self?.performHealthChecks()
+        }
     }
     
     func performHealthChecks() async {

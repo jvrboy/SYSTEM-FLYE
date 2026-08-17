@@ -42,19 +42,27 @@ actor EncryptedStorage {
     
     private func getOrCreateKey() throws -> SymmetricKey {
         let query: [String: Any] = [
-            kSecClass as String: kSecClassKey,
-            kSecAttrApplicationTag as String: keyTag,
-            kSecAttrKeyType as String: kSecAttrKeyTypeAES,
-            kSecReturnRef as String: true
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keyTag,
+            kSecAttrAccount as String: keyTag,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
         ]
-        var item: CFTypeRef?
+        var item: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
-        if status == errSecSuccess, let key = item as? SecKey { return try SymmetricKey(key: key) }
-        let key = SymmetricKey(size: .bits256)
-        if let secKey = key.key as SecKey? {
-            let addQuery: [String: Any] = [kSecClass as String: kSecClassKey, kSecAttrApplicationTag as String: keyTag, kSecAttrKeyType as String: kSecAttrKeyTypeAES, kSecValueRef as String: secKey]
-            SecItemAdd(addQuery as CFDictionary, nil)
+        if status == errSecSuccess, let data = item as? Data, data.count == 32 {
+            return SymmetricKey(data: data)
         }
+        let key = SymmetricKey(size: .bits256)
+        let keyData = key.withUnsafeBytes { Data($0) }
+        let addQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keyTag,
+            kSecAttrAccount as String: keyTag,
+            kSecValueData as String: keyData
+        ]
+        SecItemDelete(addQuery as CFDictionary)
+        guard SecItemAdd(addQuery as CFDictionary, nil) == errSecSuccess else { throw KeychainError.unavailable(errSecInteractionNotAllowed) }
         return key
     }
 }

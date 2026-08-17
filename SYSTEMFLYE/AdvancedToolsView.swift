@@ -10,7 +10,7 @@ struct AdvancedToolsView: View {
     @State private var showMonteCarlo = false
     @State private var showStressTest = false
     @State private var isRunningAnalysis = false
-    @State private var selectedTimeframe: AnalyticsTimeframe = .oneWeek
+    @State private var selectedTimeframe: AdvancedToolsView.AnalyticsTimeframe = .oneWeek
     
     enum ToolCategory: String, CaseIterable, Identifiable {
         case analytics = "Analytics"
@@ -66,7 +66,7 @@ struct AdvancedToolsView: View {
             
             HStack(spacing: 12) {
                 MetricTile(label: "API latency", value: String(format: "%.0fms", backend.services.map { $0.latency * 1000 }.reduce(0, +) / Double(max(backend.services.count, 1))), detail: "average across services", tint: SystemFlyeTheme.cyan)
-                MetricTile(label: "Service health", value: backend.overallHealth.rawValue, detail: "\(backend.services.count) endpoints", tint: backend.overallHealth == .healthy ? SystemFlyeTheme.positive : .orange)
+                MetricTile(label: "Service health", value: backend.overallHealth.rawValue, detail: "\(backend.services.count) endpoints", tint: backend.overallHealth == .healthy ? .green : .orange)
                 MetricTile(label: "Data transfer", value: backend.formattedDataTransferred(), detail: "session total", tint: .purple)
             }
         }
@@ -102,7 +102,7 @@ struct AnalyticsPanel: View {
     @EnvironmentObject private var store: AdvancedStore
     @EnvironmentObject private var marketDataManager: MarketDataManager
     @State private var isRunning = false
-    @State private var selectedTimeframe: AnalyticsTimeframe = .oneWeek
+    @State private var selectedTimeframe: AdvancedToolsView.AnalyticsTimeframe = .oneWeek
     
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -185,7 +185,7 @@ struct AnalyticsPanel: View {
         let prices = selectedPrices
         let basePrice = prices.last ?? (store.selectedPair == "EUR/USD" ? 1.08 : 1.26)
         let returns = zip(prices.dropFirst(), prices).map { ($0 - $1) / max($1, 0.00001) }
-        let volatility = max(PriceFormatter.standardDeviation(returns), 0.05)
+        let volatility = max(MathUtilities.standardDeviation(returns), 0.05)
         await analytics.runMonteCarloSimulation(basePrice: basePrice, volatility: volatility, days: 30, simulations: 500)
     }
     
@@ -433,7 +433,7 @@ struct BackendToolsPanel: View {
                 ServiceHealthRow(service: service)
             }
         }
-        .task { circuitState = await CircuitBreaker.shared.currentState().rawValue.uppercased() }
+        .task { circuitState = String(describing: await CircuitBreaker.shared.currentState()).uppercased() }
     }
 }
 
