@@ -318,7 +318,7 @@ struct SignalDetailCard: View {
     }
     
     private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
+        let formatter = Foundation.DateFormatter()
         formatter.dateFormat = "HH:mm:ss"
         return formatter.string(from: date)
     }

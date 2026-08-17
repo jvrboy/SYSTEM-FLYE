@@ -48,7 +48,7 @@ class GranularSynthesizer: NSObject, AVAudioPlayerDelegate {
     private func setupAudioEngine() {
         do {
             outputMixer = audioEngine.mainMixerNode
-            granularProcessor = GranularProcessor(sampleRate: Float(audioEngine.outputNode.outputFormat(forBus: 0)?.sampleRate ?? 44100))
+            granularProcessor = GranularProcessor(sampleRate: Float(audioEngine.outputNode.outputFormat(forBus: 0).sampleRate))
             
             try audioEngine.start()
             isRunning = true
@@ -163,12 +163,12 @@ class GranularSynthesizer: NSObject, AVAudioPlayerDelegate {
         let omega = 2 * Float.pi * frequency / sampleRate
         let alpha = sin(omega) / (2 * Q)
         
-        let b0 = 1
-        let b1 = -2 * cos(omega)
-        let b2 = 1
-        let a0 = 1 + alpha
-        let a1 = -2 * cos(omega)
-        let a2 = 1 - alpha
+        let b0: Float = 1
+        let b1: Float = -2 * cos(omega)
+        let b2: Float = 1
+        let a0: Float = 1 + alpha
+        let a1: Float = -2 * cos(omega)
+        let a2: Float = 1 - alpha
         
         var y1: Float = 0, y2: Float = 0
         var x1: Float = 0, x2: Float = 0

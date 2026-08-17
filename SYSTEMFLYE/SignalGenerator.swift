@@ -26,7 +26,7 @@ class SignalGenerator: ObservableObject {
     
     // MARK: - Signal Generation
     func generateSignals(for pair: String, indicators: TechnicalIndicators, currentPrice: Double, marketAnalysis: MarketAnalysis) {
-        let signals = detectSignals(pair: pair, indicators: indicators, currentPrice: currentPrice, marketAnalysis: marketAnalysis)
+        let signals = detectSignals(for: pair, indicators: indicators, currentPrice: currentPrice, marketAnalysis: marketAnalysis)
         
         for signal in signals {
             // Don't add duplicate signals

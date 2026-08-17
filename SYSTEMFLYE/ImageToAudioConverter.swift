@@ -149,7 +149,7 @@ class ImageToAudioConverter {
         if delta > 0 {
             if maxValue == r {
                 hue = fmod((g - b) / delta, 6) / 6
-            } else if max == g {
+            } else if maxValue == g {
                 hue = ((b - r) / delta + 2) / 6
             } else {
                 hue = ((r - g) / delta + 4) / 6

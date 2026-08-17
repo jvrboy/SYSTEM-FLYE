@@ -365,7 +365,7 @@ struct OpenTradeCard: View {
     }
     
     private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
+        let formatter = Foundation.DateFormatter()
         formatter.dateFormat = "MMM dd, HH:mm"
         return formatter.string(from: date)
     }
@@ -481,7 +481,7 @@ struct ClosedTradeCard: View {
     }
     
     private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
+        let formatter = Foundation.DateFormatter()
         formatter.dateFormat = "MMM dd, HH:mm"
         return formatter.string(from: date)
     }
