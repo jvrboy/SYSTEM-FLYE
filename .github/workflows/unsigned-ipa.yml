@@ -16,21 +16,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate --spec project.yml
+
       - name: Locate Xcode project
         id: project
         shell: bash
         run: |
           set -euo pipefail
-          project="$(find . -maxdepth 3 -name '*.xcodeproj' -type d | head -n 1)"
-          if [[ -z "$project" ]]; then
-            echo "No .xcodeproj found. Add an Xcode project before dispatching this workflow." >&2
-            exit 1
-          fi
+          project="$(find . -maxdepth 2 -name '*.xcodeproj' -type d | head -n 1)"
+          test -n "$project"
           echo "path=$project" >> "$GITHUB_OUTPUT"
           echo "project=$project"
-
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.2.app
 
       - name: Build unsigned app
         shell: bash

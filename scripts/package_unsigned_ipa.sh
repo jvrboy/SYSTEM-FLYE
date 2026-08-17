@@ -11,10 +11,10 @@ fi
 
 WORK_DIR="$(mktemp -d)"
 trap 'rm -rf "$WORK_DIR"' EXIT
-mkdir -p "$WORK_DIR/Payload"
+mkdir -p "$WORK_DIR/Payload" "$(dirname "$OUTPUT_PATH")"
 cp -R "$APP_PATH" "$WORK_DIR/Payload/"
 rm -f "$OUTPUT_PATH"
-(cd "$WORK_DIR" && /usr/bin/zip -qry "$OLDPWD/$OUTPUT_PATH" Payload)
+(cd "$WORK_DIR" && /usr/bin/ditto -c -k --sequesterRsrc --keepParent Payload "$OLDPWD/$OUTPUT_PATH")
 
 echo "Created unsigned IPA: $OUTPUT_PATH"
 /usr/bin/unzip -l "$OUTPUT_PATH"
