@@ -54,7 +54,8 @@ actor LocalRepository {
     static let shared = LocalRepository()
     private let fileManager = FileManager.default
     private let directoryName = "SYSTEMFLYE"
-    private let schemaVersion = 1
+    private let schemaVersion = 2
+    private let backupSuffix = ".backup"
 
     private var directoryURL: URL {
         fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -68,7 +69,8 @@ actor LocalRepository {
         guard fileManager.fileExists(atPath: url.path) else { return LocalWorkspaceSnapshot() }
         do {
             let data = try Data(contentsOf: url)
-            return try JSONDecoder.flye.decode(FlyeEnvelope<LocalWorkspaceSnapshot>.self, from: data).payload
+            let envelope = try JSONDecoder.flye.decode(FlyeEnvelope<LocalWorkspaceSnapshot>.self, from: data)
+            return migrate(envelope).payload
         } catch {
             throw LocalStoreError.decodingFailed
         }
@@ -79,8 +81,18 @@ actor LocalRepository {
         do {
             let envelope = FlyeEnvelope(schemaVersion: schemaVersion, updatedAt: Date(), payload: snapshot)
             let data = try JSONEncoder.flye.encode(envelope)
-            try data.write(to: fileURL("workspace.json"), options: .atomic)
+            let destination = fileURL("workspace.json")
+            if fileManager.fileExists(atPath: destination.path) {
+                try? fileManager.removeItem(at: fileURL("workspace.json\(backupSuffix)"))
+                try? fileManager.copyItem(at: destination, to: fileURL("workspace.json\(backupSuffix)"))
+            }
+            try data.write(to: destination, options: .atomic)
         } catch { throw LocalStoreError.atomicWriteFailed }
+    }
+
+    private func migrate(_ envelope: FlyeEnvelope<LocalWorkspaceSnapshot>) -> FlyeEnvelope<LocalWorkspaceSnapshot> {
+        guard envelope.schemaVersion < schemaVersion else { return envelope }
+        return FlyeEnvelope(schemaVersion: schemaVersion, updatedAt: envelope.updatedAt, payload: envelope.payload)
     }
 
     func appendAudit(_ event: AuditEvent) throws {

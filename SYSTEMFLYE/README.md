@@ -11,3 +11,8 @@ Create a new iOS App project named `SYSTEMFLYE` in Xcode, then add every Swift f
 - Market Intelligence: dashboard, analysis, signals, portfolio, and settings.
 - Sound Lab: granular synthesizer, image-to-audio conversion, export, and local file management.
 - Bundled WAV assets in `Resources/` for interface and synthesis workflows.
+- Local production storage in Application Support with versioned snapshots, atomic writes, backups, audit logs, diagnostics export, and reset controls.
+
+## Unsigned IPA GitHub Action
+
+The repository includes `.github/workflows/unsigned-ipa.yml` and `scripts/package_unsigned_ipa.sh`. Add the folder to an Xcode project whose scheme is named `SYSTEMFLYE`, push to `main`, then download the `SYSTEM-FLYE-unsigned-ipa` artifact from GitHub Actions. The artifact is intentionally unsigned and is not installable on a device until separately signed with an Apple certificate and provisioning profile.

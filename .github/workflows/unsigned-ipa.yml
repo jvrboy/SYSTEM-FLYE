@@ -1,0 +1,65 @@
+name: Build unsigned iOS IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-unsigned-ipa:
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Locate Xcode project
+        id: project
+        shell: bash
+        run: |
+          set -euo pipefail
+          project="$(find . -maxdepth 3 -name '*.xcodeproj' -type d | head -n 1)"
+          if [[ -z "$project" ]]; then
+            echo "No .xcodeproj found. Add an Xcode project before dispatching this workflow." >&2
+            exit 1
+          fi
+          echo "path=$project" >> "$GITHUB_OUTPUT"
+          echo "project=$project"
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app
+
+      - name: Build unsigned app
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          xcodebuild \
+            -project "${{ steps.project.outputs.path }}" \
+            -scheme SYSTEMFLYE \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            clean build
+
+      - name: Package unsigned IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          app="$(find build/DerivedData/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' -type d | head -n 1)"
+          test -n "$app"
+          chmod +x scripts/package_unsigned_ipa.sh
+          scripts/package_unsigned_ipa.sh "$app" build/SYSTEM-FLYE-unsigned.ipa
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SYSTEM-FLYE-unsigned-ipa
+          path: build/SYSTEM-FLYE-unsigned.ipa
+          if-no-files-found: error
