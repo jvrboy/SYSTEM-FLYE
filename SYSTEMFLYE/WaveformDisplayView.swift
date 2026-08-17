@@ -42,14 +42,10 @@ struct WaveformDisplayView: View {
                 context.stroke(
                     path,
                     with: .linearGradient(
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color(red: 0.3, green: 0.8, blue: 1.0),
-                                Color(red: 0.2, green: 0.6, blue: 0.9)
-                            ]),
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        ),
+                        Gradient(colors: [
+                            Color(red: 0.3, green: 0.8, blue: 1.0),
+                            Color(red: 0.2, green: 0.6, blue: 0.9)
+                        ]),
                         startPoint: CGPoint(x: 0, y: centerY),
                         endPoint: CGPoint(x: width, y: centerY)
                     ),
@@ -74,14 +70,10 @@ struct WaveformDisplayView: View {
                 context.stroke(
                     bottomPath,
                     with: .linearGradient(
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color(red: 0.3, green: 0.8, blue: 1.0),
-                                Color(red: 0.2, green: 0.6, blue: 0.9)
-                            ]),
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        ),
+                        Gradient(colors: [
+                            Color(red: 0.3, green: 0.8, blue: 1.0),
+                            Color(red: 0.2, green: 0.6, blue: 0.9)
+                        ]),
                         startPoint: CGPoint(x: 0, y: centerY),
                         endPoint: CGPoint(x: width, y: centerY)
                     ),
