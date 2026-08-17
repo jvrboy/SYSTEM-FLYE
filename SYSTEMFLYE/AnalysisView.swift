@@ -259,8 +259,8 @@ struct SimpleChartView: View {
             .cornerRadius(8)
             
             // Simple line visualization
-            Canvas { context in
-                let width = 300.0
+            Canvas { context, size in
+                let width = min(300.0, size.width)
                 let height = 120.0
                 
                 // Draw grid

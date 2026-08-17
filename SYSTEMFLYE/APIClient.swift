@@ -53,7 +53,9 @@ class OANDAClient: ForexAPIProvider {
         
         var prices: [String: Double] = [:]
         for price in priceResponse.prices {
-            let midPrice = (Double(price.bids.first?.price ?? "0") ?? 0 + Double(price.asks.first?.price ?? "0") ?? 0) / 2
+            let bid = Double(price.bids.first?.price ?? "0") ?? 0
+            let ask = Double(price.asks.first?.price ?? "0") ?? 0
+            let midPrice = (bid + ask) / 2
             prices[price.instrument] = midPrice
         }
         
@@ -368,7 +370,7 @@ class APIClientManager: ObservableObject {
             error = apiError
             isConnected = false
         } catch {
-            error = .serverError
+            self.error = .serverError
             isConnected = false
         }
     }

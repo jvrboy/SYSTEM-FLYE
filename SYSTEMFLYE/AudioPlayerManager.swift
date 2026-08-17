@@ -1,4 +1,5 @@
 import AVFoundation
+import Accelerate
 import Combine
 
 class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
@@ -45,9 +46,7 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
         guard let playerNode = playerNode else { return }
         
         do {
-            if playerNode.isRunning {
-                playerNode.stop()
-            }
+            playerNode.stop()
             
             playerNode.scheduleBuffer(audioBuffer, completionHandler: { [weak self] in
                 DispatchQueue.main.async {
@@ -164,7 +163,7 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
     }
     
     @objc private func updateMeters() {
-        guard let playerNode = playerNode, playerNode.isRunning else { return }
+        guard playerNode != nil else { return }
         
         let mainMixer = audioEngine.mainMixerNode
         mainMixer.installTap(

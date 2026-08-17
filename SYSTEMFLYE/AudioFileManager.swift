@@ -1,5 +1,6 @@
 import AVFoundation
 import Accelerate
+import AudioToolbox
 
 class AudioFileManager {
     static let shared = AudioFileManager()
@@ -26,7 +27,7 @@ class AudioFileManager {
         var formatID: AudioFormatID {
             switch self {
             case .wav: return kAudioFormatLinearPCM
-            case .aiff: return kAudioFormatAIFF
+            case .aiff: return kAudioFormatLinearPCM
             case .m4a: return kAudioFormatMPEG4AAC
             case .mp3: return kAudioFormatMPEGLayer3
             case .flac: return kAudioFormatFLAC
