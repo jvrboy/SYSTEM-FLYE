@@ -30,9 +30,9 @@ class OANDAClient: ForexAPIProvider {
     
     func fetchPrices(for pairs: [String]) async throws -> [String: Double] {
         let pairString = pairs.joined(separator: ",")
-        let endpoint = "\(baseURL)/v3/accounts/\(accountID)/pricing?instruments=\(pairString)"
-        
-        guard let url = URL(string: endpoint) else {
+        var components = URLComponents(string: "\(baseURL)/v3/accounts/\(accountID)/pricing")
+        components?.queryItems = [URLQueryItem(name: "instruments", value: pairString)]
+        guard let url = components?.url else {
             throw APIError.invalidURL
         }
         
@@ -40,9 +40,9 @@ class OANDAClient: ForexAPIProvider {
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, httpResponse) = try await FlyeHTTPClient.shared.data(for: request)
         
-        guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+        guard (200...299).contains(httpResponse.statusCode) else {
             throw APIError.invalidResponse
         }
         
@@ -61,18 +61,18 @@ class OANDAClient: ForexAPIProvider {
     }
     
     func fetchHistoricalData(pair: String, timeframe: String, limit: Int) async throws -> [PriceData] {
-        let endpoint = "\(baseURL)/v3/instruments/\(pair)/candles?granularity=\(timeframe)&count=\(limit)"
-        
-        guard let url = URL(string: endpoint) else {
+        var components = URLComponents(string: "\(baseURL)/v3/instruments/\(pair)/candles")
+        components?.queryItems = [URLQueryItem(name: "granularity", value: timeframe), URLQueryItem(name: "count", value: String(limit))]
+        guard let url = components?.url else {
             throw APIError.invalidURL
         }
         
         var request = URLRequest(url: url)
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, httpResponse) = try await FlyeHTTPClient.shared.data(for: request)
         
-        guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+        guard (200...299).contains(httpResponse.statusCode) else {
             throw APIError.invalidResponse
         }
         
@@ -95,18 +95,16 @@ class OANDAClient: ForexAPIProvider {
     }
     
     func getMarketStatus() async throws -> MarketStatus {
-        let endpoint = "\(baseURL)/v3/accounts/\(accountID)"
-        
-        guard let url = URL(string: endpoint) else {
+        guard let url = URL(string: "\(baseURL)/v3/accounts/\(accountID)") else {
             throw APIError.invalidURL
         }
         
         var request = URLRequest(url: url)
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, httpResponse) = try await FlyeHTTPClient.shared.data(for: request)
         
-        guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+        guard (200...299).contains(httpResponse.statusCode) else {
             throw APIError.invalidResponse
         }
         
@@ -142,9 +140,9 @@ class TwelveDataClient: ForexAPIProvider {
             throw APIError.invalidURL
         }
         
-        let (data, response) = try await URLSession.shared.data(from: url)
+        let (data, httpResponse) = try await FlyeHTTPClient.shared.data(for: URLRequest(url: url))
         
-        guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+        guard (200...299).contains(httpResponse.statusCode) else {
             throw APIError.invalidResponse
         }
         
@@ -168,9 +166,9 @@ class TwelveDataClient: ForexAPIProvider {
             throw APIError.invalidURL
         }
         
-        let (data, response) = try await URLSession.shared.data(from: url)
+        let (data, httpResponse) = try await FlyeHTTPClient.shared.data(for: URLRequest(url: url))
         
-        guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+        guard (200...299).contains(httpResponse.statusCode) else {
             throw APIError.invalidResponse
         }
         

@@ -7,7 +7,7 @@ struct AdvancedDashboardView: View {
     var body: some View {
         ScrollView { VStack(alignment: .leading, spacing: 20) { overviewHeader; tabBar; Group { switch selectedTab { case 1: AgentConsoleView(); case 2: PipelineView(); case 3: ForexQuantView(); case 4: NeuralLabView(); default: CommandCenterView() } } }.padding(18).padding(.bottom, 30) }.scrollIndicators(.hidden)
     }
-    private var overviewHeader: some View { HStack(alignment: .bottom) { SectionHeader(eyebrow: "F L Y E  /  O P E R A T I O N S", title: tabs[selectedTab]); Spacer(); Label("ON-DEVICE", systemImage: "cpu").font(.caption2.weight(.bold)).foregroundStyle(SystemFlyeTheme.cyan).padding(.horizontal, 10).padding(.vertical, 7).background(SystemFlyeTheme.cyan.opacity(0.12), in: Capsule()) } }
+    private var overviewHeader: some View { VStack(alignment: .leading, spacing: 14) { HStack(alignment: .bottom) { SectionHeader(eyebrow: "F L Y E  /  O P E R A T I O N S", title: tabs[selectedTab]); Spacer(); Label("ON-DEVICE", systemImage: "cpu").font(.caption2.weight(.bold)).foregroundStyle(SystemFlyeTheme.cyan).padding(.horizontal, 10).padding(.vertical, 7).background(SystemFlyeTheme.cyan.opacity(0.12), in: Capsule()) }; ProductionStatusCard() } }
     private var tabBar: some View { ScrollView(.horizontal, showsIndicators: false) { HStack(spacing: 8) { ForEach(tabs.indices, id: \.self) { index in Button(tabs[index]) { selectedTab = index }.font(.caption.weight(.semibold)).foregroundStyle(selectedTab == index ? .black : .white.opacity(0.7)).padding(.horizontal, 14).padding(.vertical, 9).background(selectedTab == index ? SystemFlyeTheme.cyan : SystemFlyeTheme.panel, in: Capsule()) } } } }
 }
 

@@ -5,6 +5,7 @@ struct SYSTEMFLYEApp: App {
     @StateObject private var marketDataManager = MarketDataManager()
     @StateObject private var signalGenerator = SignalGenerator()
     @StateObject private var advancedStore = AdvancedStore()
+    @StateObject private var productionStore = ProductionStore()
     @State private var mode: FlyeMode = .intelligence
 
     var body: some Scene {
@@ -13,6 +14,8 @@ struct SYSTEMFLYEApp: App {
                 .environmentObject(marketDataManager)
                 .environmentObject(signalGenerator)
                 .environmentObject(advancedStore)
+                .environmentObject(productionStore)
+                .task { await productionStore.restore() }
                 .preferredColorScheme(.dark)
         }
     }
