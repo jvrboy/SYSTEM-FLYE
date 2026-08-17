@@ -166,6 +166,8 @@ struct PlatformExpansionView: View {
                 }
                 .buttonStyle(.borderedProminent).tint(SystemFlyeTheme.cyan).disabled(forexBackend.isRunning)
             }
+            ForexRiskToolsView()
+
             if let report = forexBackend.reports["EURUSD"] {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack { Text("LIVE BACKEND REPORT").font(.caption2.weight(.bold)).tracking(1.3); Spacer(); Text(report.bias.rawValue).font(.caption.weight(.bold)).foregroundStyle(report.bias == .buy ? .green : report.bias == .sell ? .orange : .secondary) }

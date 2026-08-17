@@ -335,26 +335,98 @@ struct TwelveDataTimeSeriesResponse: Codable {
 class APIClientManager: ObservableObject {
     static let shared = APIClientManager()
     @Published var provider: ForexAPIProvider?
+    @Published var fallbackProvider: ForexAPIProvider?
     @Published var error: APIError?
     @Published var isConnected = false
+    @Published private(set) var primaryProviderName = "Not configured"
+    @Published private(set) var fallbackProviderName = "Not configured"
+    @Published private(set) var lastSuccessfulProvider = "None"
+    @Published private(set) var failoverCount = 0
+    @Published var failoverEnabled = true
+    private let credentials = SecureCredentialStore()
     
-    enum ProviderType {
+    enum ProviderType: Equatable {
         case oanda
         case twelveData
         case mock
     }
     
-    func configure(with type: ProviderType, apiKey: String, accountID: String = "") {
+    func configure(with type: ProviderType, apiKey: String, accountID: String = "", asFallback: Bool = false) {
+        let configured: ForexAPIProvider
         switch type {
-        case .oanda:
-            provider = OANDAClient(apiKey: apiKey, accountID: accountID)
-        case .twelveData:
-            provider = TwelveDataClient(apiKey: apiKey)
-        case .mock:
-            provider = MockAPIClient()
+        case .oanda: configured = OANDAClient(apiKey: apiKey, accountID: accountID)
+        case .twelveData: configured = TwelveDataClient(apiKey: apiKey)
+        case .mock: configured = MockAPIClient()
         }
-        
+        let name = type == .oanda ? "OANDA" : type == .twelveData ? "Twelve Data" : "Mock"
+        if asFallback {
+            fallbackProvider = configured
+            fallbackProviderName = name
+        } else {
+            provider = configured
+            primaryProviderName = name
+        }
         isConnected = provider != nil
+    }
+
+    func saveCredentials(provider type: ProviderType, apiKey: String, accountID: String = "", asFallback: Bool = false) throws {
+        let prefix = credentialPrefix(type: type, fallback: asFallback)
+        if apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { throw APIError.authenticationError }
+        try credentials.save(apiKey, for: "\(prefix).apiKey")
+        if type == .oanda { try credentials.save(accountID, for: "\(prefix).accountID") }
+        configure(with: type, apiKey: apiKey, accountID: accountID, asFallback: asFallback)
+    }
+
+    func loadCredentialsFromKeychain() {
+        let primary = loadCredential(type: .oanda, fallback: false) ?? loadCredential(type: .twelveData, fallback: false)
+        let fallback = loadCredential(type: .twelveData, fallback: true) ?? loadCredential(type: .oanda, fallback: true)
+        if let primary { configure(with: primary.type, apiKey: primary.apiKey, accountID: primary.accountID) }
+        if let fallback { configure(with: fallback.type, apiKey: fallback.apiKey, accountID: fallback.accountID, asFallback: true) }
+    }
+
+    func clearCredentials(fallback: Bool) {
+        for type in [ProviderType.oanda, .twelveData] {
+            let prefix = credentialPrefix(type: type, fallback: fallback)
+            credentials.delete("\(prefix).apiKey")
+            credentials.delete("\(prefix).accountID")
+        }
+        if fallback { fallbackProvider = nil; fallbackProviderName = "Not configured" } else { provider = nil; primaryProviderName = "Not configured" }
+        isConnected = provider != nil
+    }
+
+    func fetchPricesWithFailover(for pairs: [String]) async throws -> [String: Double] {
+        guard let primary = provider else { throw APIError.authenticationError }
+        do { let values = try await primary.fetchPrices(for: pairs); lastSuccessfulProvider = primaryProviderName; return values }
+        catch {
+            guard failoverEnabled, let fallback = fallbackProvider else { throw error }
+            failoverCount += 1
+            let values = try await fallback.fetchPrices(for: pairs)
+            lastSuccessfulProvider = fallbackProviderName
+            return values
+        }
+    }
+
+    func fetchHistoricalWithFailover(pair: String, timeframe: String, limit: Int) async throws -> [PriceData] {
+        guard let primary = provider else { throw APIError.authenticationError }
+        do { let values = try await primary.fetchHistoricalData(pair: pair, timeframe: timeframe, limit: limit); lastSuccessfulProvider = primaryProviderName; return values }
+        catch {
+            guard failoverEnabled, let fallback = fallbackProvider else { throw error }
+            failoverCount += 1
+            let values = try await fallback.fetchHistoricalData(pair: pair, timeframe: timeframe, limit: limit)
+            lastSuccessfulProvider = fallbackProviderName
+            return values
+        }
+    }
+
+    private func credentialPrefix(type: ProviderType, fallback: Bool) -> String {
+        "forex.\(fallback ? "fallback" : "primary").\(type == .oanda ? "oanda" : "twelveData")"
+    }
+
+    private func loadCredential(type: ProviderType, fallback: Bool) -> (type: ProviderType, apiKey: String, accountID: String)? {
+        let prefix = credentialPrefix(type: type, fallback: fallback)
+        guard let storedKey = try? credentials.value(for: "\(prefix).apiKey"), let key = storedKey, !key.isEmpty else { return nil }
+        let account = try? credentials.value(for: "\(prefix).accountID")
+        return (type, key, account ?? "")
     }
     
     func testConnection() async {

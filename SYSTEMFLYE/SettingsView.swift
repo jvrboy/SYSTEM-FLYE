@@ -103,20 +103,10 @@ struct SettingsView: View {
                     Divider()
                         .background(Color(UIColor(red: 0.2, green: 0.2, blue: 0.22, alpha: 1)))
                     
-                    // API Settings
-                    SettingSection(title: "API Configuration") {
-                        SettingTextField(
-                            title: "API Key",
-                            subtitle: "Your trading platform API key",
-                            placeholder: "Enter API key"
-                        )
-                        
-                        SettingTextField(
-                            title: "API Secret",
-                            subtitle: "Your trading platform API secret",
-                            placeholder: "Enter API secret",
-                            isSecure: true
-                        )
+                    // Live Forex Provider Settings
+                    SettingSection(title: "Live Forex Providers") {
+                        ProviderConfigurationView()
+                            .environmentObject(APIClientManager.shared)
                     }
                     
                     Divider()

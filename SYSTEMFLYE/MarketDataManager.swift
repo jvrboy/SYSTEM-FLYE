@@ -90,9 +90,9 @@ class MarketDataManager: ObservableObject {
     }
     
     func refreshLivePrices() async {
-        guard let provider = apiClient.provider else { return }
+        guard apiClient.provider != nil else { return }
         do {
-            let prices = try await provider.fetchPrices(for: selectedPairs)
+            let prices = try await apiClient.fetchPricesWithFailover(for: selectedPairs)
             dataSource = "live provider"
             for pair in selectedPairs {
                 guard let newPrice = prices[pair], newPrice > 0 else { continue }
@@ -129,7 +129,7 @@ class MarketDataManager: ObservableObject {
         
         do {
             if let provider = apiClient.provider {
-                let history = try await provider.fetchHistoricalData(pair: pair, timeframe: timeframe.rawValue, limit: 500)
+                let history = try await apiClient.fetchHistoricalWithFailover(pair: pair, timeframe: timeframe.rawValue, limit: 500)
                 guard !history.isEmpty else { throw APIError.invalidResponse }
                 dataSource = "live provider"
                 priceHistory[pair] = history
