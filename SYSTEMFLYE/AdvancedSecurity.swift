@@ -64,7 +64,7 @@ actor EncryptedStorage {
             kSecValueData as String: keyData
         ]
         SecItemDelete(addQuery as CFDictionary)
-        guard SecItemAdd(addQuery as CFDictionary, nil) == errSecSuccess else { throw NetworkKeychainError.unavailable(errSecInteractionNotAllowed) }
+        guard SecItemAdd(addQuery as CFDictionary, nil) == errSecSuccess else { throw KeychainError.unavailable(errSecInteractionNotAllowed) }
         return key
     }
 }

@@ -110,14 +110,14 @@ struct OverviewTab: View {
             // Main Stats
             VStack(spacing: 12) {
                 HStack(spacing: 12) {
-                    PortfolioStatCard(
+                    StatCard(
                         title: "Total Balance",
                         value: String(format: "$%.2f", portfolioManager.portfolio.totalBalance),
                         icon: "wallet.pass.fill",
                         color: .blue
                     )
                     
-                    PortfolioStatCard(
+                    StatCard(
                         title: "Profit/Loss",
                         value: String(format: "$%.2f", portfolioManager.portfolio.totalProfit - portfolioManager.portfolio.totalLoss),
                         icon: "chart.line.uptrend.xyaxis",
@@ -126,14 +126,14 @@ struct OverviewTab: View {
                 }
                 
                 HStack(spacing: 12) {
-                    PortfolioStatCard(
+                    StatCard(
                         title: "Total Profit",
                         value: String(format: "$%.2f", portfolioManager.portfolio.totalProfit),
                         icon: "plus.circle.fill",
                         color: .green
                     )
                     
-                    PortfolioStatCard(
+                    StatCard(
                         title: "Total Loss",
                         value: String(format: "$%.2f", portfolioManager.portfolio.totalLoss),
                         icon: "minus.circle.fill",
@@ -488,7 +488,7 @@ struct ClosedTradeCard: View {
 }
 
 // MARK: - Helper Views
-struct PortfolioStatCard: View {
+struct StatCard: View {
     let title: String
     let value: String
     let icon: String

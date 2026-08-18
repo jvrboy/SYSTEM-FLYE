@@ -13,7 +13,7 @@ final class AnalyticsEngine: ObservableObject {
     @Published private(set) var calmarRatio: Double = 0
     @Published private(set) var correlationMatrix: [[Double]] = []
     @Published private(set) var anomalies: [Anomaly] = []
-    @Published private(set) var stressTestResults: AnalyticsStressTestResult?
+    @Published private(set) var stressTestResults: StressTestResult?
     
     func runMonteCarloSimulation(basePrice: Double, volatility: Double, days: Int = 30, simulations: Int = 1000) async {
         guard basePrice > 0, volatility >= 0, days > 0, simulations > 0 else {
@@ -106,10 +106,10 @@ final class AnalyticsEngine: ObservableObject {
         return found
     }
     
-    func runStressTest(portfolio: Portfolio, scenarios: [AnalyticsStressScenario]) -> AnalyticsStressTestResult {
+    func runStressTest(portfolio: Portfolio, scenarios: [StressScenario]) -> StressTestResult {
         guard !scenarios.isEmpty else {
-            let fallback = AnalyticsStressScenario(name: "No scenario", description: "No stress scenarios configured", expectedLoss: 0, color: .stressGreen)
-            let result = AnalyticsStressTestResult(worstCase: StressScenarioResult(scenario: fallback, loss: 0, remainingBalance: portfolio.totalBalance), scenarios: [])
+            let fallback = StressScenario(name: "No scenario", description: "No stress scenarios configured", expectedLoss: 0, color: .stressGreen)
+            let result = StressTestResult(worstCase: StressScenarioResult(scenario: fallback, loss: 0, remainingBalance: portfolio.totalBalance), scenarios: [])
             stressTestResults = result
             return result
         }
@@ -118,7 +118,7 @@ final class AnalyticsEngine: ObservableObject {
             return StressScenarioResult(scenario: scenario, loss: loss, remainingBalance: portfolio.totalBalance - loss)
         }.min { $0.remainingBalance > $1.remainingBalance } ?? StressScenarioResult(scenario: scenarios[0], loss: 0, remainingBalance: portfolio.totalBalance)
         
-        let result = AnalyticsStressTestResult(worstCase: worstDrawdown, scenarios: scenarios.map { scenario in
+        let result = StressTestResult(worstCase: worstDrawdown, scenarios: scenarios.map { scenario in
             StressScenarioResult(scenario: scenario, loss: portfolio.totalBalance * scenario.expectedLoss, remainingBalance: portfolio.totalBalance * (1 - scenario.expectedLoss))
         })
         stressTestResults = result
@@ -172,7 +172,7 @@ struct Anomaly: Identifiable {
     enum AnomalyType { case spike, drop }
 }
 
-struct AnalyticsStressScenario: Identifiable {
+struct StressScenario: Identifiable {
     let id = UUID()
     let name: String
     let description: String
@@ -182,12 +182,12 @@ struct AnalyticsStressScenario: Identifiable {
 
 struct StressScenarioResult: Identifiable {
     let id = UUID()
-    let scenario: AnalyticsStressScenario
+    let scenario: StressScenario
     let loss: Double
     let remainingBalance: Double
 }
 
-struct AnalyticsStressTestResult: Identifiable {
+struct StressTestResult: Identifiable {
     let id = UUID()
     let worstCase: StressScenarioResult
     let scenarios: [StressScenarioResult]

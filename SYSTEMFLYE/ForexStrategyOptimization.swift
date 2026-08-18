@@ -59,7 +59,7 @@ struct RiskAdjustedMetrics: Codable, Equatable {
 enum StrategyOptimizer {
     static func optimize(pair: String, history: [PriceData], generations: Int = 12, populationSize: Int = 28, seed: UInt64 = 0xC0FFEE) -> GeneticOptimizationResult? {
         guard history.count >= 100, generations > 0, populationSize > 4 else { return nil }
-        var generator = StrategySeededGenerator(seed: seed)
+        var generator = SeededGenerator(seed: seed)
         var population = (0..<populationSize).map { _ in randomGenome(using: &generator) }
         var best = evaluate(population[0], history: history)
         for _ in 0..<generations {
@@ -106,15 +106,15 @@ enum StrategyOptimizer {
         return StrategyFitness(genome: genome, netReturn: metrics.totalReturn, maxDrawdown: metrics.maxDrawdown, sortino: metrics.sortino, calmar: metrics.calmar, trades: trades, winRate: trades > 0 ? Double(wins) / Double(trades) : 0, fitness: fitness)
     }
 
-    private static func randomGenome(using generator: inout StrategySeededGenerator) -> StrategyGenome {
+    private static func randomGenome(using generator: inout SeededGenerator) -> StrategyGenome {
         StrategyGenome(fastPeriod: generator.nextInt(upperBound: 20) + 4, slowPeriod: generator.nextInt(upperBound: 80) + 30, entryThreshold: generator.nextDouble(in: 0.05...0.35), exitThreshold: generator.nextDouble(in: 0.01...0.08), stopATRMultiplier: generator.nextDouble(in: 0.8...2.8), targetATRMultiplier: generator.nextDouble(in: 1.2...4.5), maxRiskPercent: generator.nextDouble(in: 0.005...0.02))
     }
 
-    private static func crossover(_ first: StrategyGenome, _ second: StrategyGenome, using generator: inout StrategySeededGenerator) -> StrategyGenome {
+    private static func crossover(_ first: StrategyGenome, _ second: StrategyGenome, using generator: inout SeededGenerator) -> StrategyGenome {
         StrategyGenome(fastPeriod: generator.nextBool() ? first.fastPeriod : second.fastPeriod, slowPeriod: generator.nextBool() ? first.slowPeriod : second.slowPeriod, entryThreshold: generator.nextBool() ? first.entryThreshold : second.entryThreshold, exitThreshold: generator.nextBool() ? first.exitThreshold : second.exitThreshold, stopATRMultiplier: generator.nextBool() ? first.stopATRMultiplier : second.stopATRMultiplier, targetATRMultiplier: generator.nextBool() ? first.targetATRMultiplier : second.targetATRMultiplier, maxRiskPercent: generator.nextBool() ? first.maxRiskPercent : second.maxRiskPercent)
     }
 
-    private static func mutate(_ genome: StrategyGenome, using generator: inout StrategySeededGenerator) -> StrategyGenome {
+    private static func mutate(_ genome: StrategyGenome, using generator: inout SeededGenerator) -> StrategyGenome {
         StrategyGenome(fastPeriod: generator.nextBool() ? genome.fastPeriod + generator.nextInt(upperBound: 5) - 2 : genome.fastPeriod, slowPeriod: generator.nextBool() ? genome.slowPeriod + generator.nextInt(upperBound: 9) - 4 : genome.slowPeriod, entryThreshold: generator.nextBool() ? genome.entryThreshold + generator.nextDouble(in: -0.04...0.04) : genome.entryThreshold, exitThreshold: generator.nextBool() ? genome.exitThreshold + generator.nextDouble(in: -0.02...0.02) : genome.exitThreshold, stopATRMultiplier: generator.nextBool() ? genome.stopATRMultiplier + generator.nextDouble(in: -0.25...0.25) : genome.stopATRMultiplier, targetATRMultiplier: generator.nextBool() ? genome.targetATRMultiplier + generator.nextDouble(in: -0.4...0.4) : genome.targetATRMultiplier, maxRiskPercent: genome.maxRiskPercent)
     }
 }
@@ -145,7 +145,7 @@ enum RiskMetricsCalculator {
     }
 }
 
-struct StrategySeededGenerator {
+struct SeededGenerator {
     private var state: UInt64
     init(seed: UInt64) { state = seed == 0 ? 1 : seed }
     mutating func next() -> UInt64 { state = state &* 2862933555777941757 &+ 3037000493; return state }

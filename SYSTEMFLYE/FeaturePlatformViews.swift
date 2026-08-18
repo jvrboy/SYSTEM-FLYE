@@ -75,7 +75,7 @@ struct PlatformExpansionView: View {
     @EnvironmentObject private var marketDataManager: MarketDataManager
     @EnvironmentObject private var forexBackend: ForexTradingBackend
     @State private var section = 0
-    private let sections = ["Music", "Forex", "Technical", "Loop Lab", "Agents", "Skills", "Pipelines", "Fonts", "Icons", "Advanced"]
+    private let sections = ["Music", "Forex", "Technical", "Loop Lab", "Agents", "Skills", "Pipelines", "Fonts"]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -104,21 +104,11 @@ struct PlatformExpansionView: View {
                 case 4: agents
                 case 5: skills
                 case 6: pipelines
-                case 7: fonts
-                case 8: icons
-                default: advancedExtensions
+                default: fonts
                 }
             }
             .scrollIndicators(.hidden)
         }
-    }
-
-    private var advancedExtensions: some View {
-        AdvancedExtensionsView()
-    }
-
-    private var icons: some View {
-        IconGalleryView()
     }
 
     private var musicTools: some View {

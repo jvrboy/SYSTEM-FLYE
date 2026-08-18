@@ -4,8 +4,8 @@ import Combine
 // MARK: - Circuit Breaker
 enum CircuitState { case closed, open, halfOpen }
 
-actor BackendCircuitBreaker {
-    static let shared = BackendCircuitBreaker()
+actor CircuitBreaker {
+    static let shared = CircuitBreaker()
     private let maxFailures: Int
     private let resetInterval: TimeInterval
     private var failureCount = 0
@@ -126,8 +126,8 @@ actor BatchCoordinator {
 
 // MARK: - Metrics Collector
 @MainActor
-final class BackendMetricsCollector: ObservableObject {
-    static let shared = BackendMetricsCollector()
+final class MetricsCollector: ObservableObject {
+    static let shared = MetricsCollector()
     @Published private(set) var requestCount = 0
     @Published private(set) var successCount = 0
     @Published private(set) var failureCount = 0
@@ -182,15 +182,11 @@ protocol RequestInterceptor {
 
 struct LoggingInterceptor: RequestInterceptor {
     func intercept(request: URLRequest) async -> URLRequest {
-        #if DEBUG
         print("[HTTP] \(request.httpMethod ?? "GET") \(request.url?.absoluteString ?? "")")
-        #endif
         return request
     }
     func intercept(response: (data: Data, response: HTTPURLResponse), for request: URLRequest) async -> (data: Data, response: HTTPURLResponse) {
-        #if DEBUG
         print("[HTTP] \(response.response.statusCode) \(request.url?.absoluteString ?? "")")
-        #endif
         return response
     }
 }
@@ -206,15 +202,15 @@ final class MetricsInterceptor: RequestInterceptor {
         let latency = startTime.map { Date().timeIntervalSince($0) } ?? 0
         let success = 200...299 ~= response.response.statusCode
         Task { @MainActor in
-            BackendMetricsCollector.shared.record(success: success, latency: latency)
+            MetricsCollector.shared.record(success: success, latency: latency)
         }
         return response
     }
 }
 
 // MARK: - Background Sync Scheduler
-actor BackendBackgroundSyncScheduler {
-    static let shared = BackendBackgroundSyncScheduler()
+actor BackgroundSyncScheduler {
+    static let shared = BackgroundSyncScheduler()
     private var tasks: [String: (task: @Sendable () async -> Void, interval: TimeInterval)] = [:]
     
     func schedule(id: String, interval: TimeInterval, task: @escaping @Sendable () async -> Void) {

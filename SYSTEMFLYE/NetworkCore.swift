@@ -76,7 +76,7 @@ struct SecureCredentialStore {
         ]
         SecItemDelete(query as CFDictionary)
         let status = SecItemAdd(query as CFDictionary, nil)
-        guard status == errSecSuccess else { throw NetworkKeychainError.unavailable(status) }
+        guard status == errSecSuccess else { throw KeychainError.unavailable(status) }
     }
 
     func value(for key: String) throws -> String? {
@@ -90,7 +90,7 @@ struct SecureCredentialStore {
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         if status == errSecItemNotFound { return nil }
-        guard status == errSecSuccess, let data = result as? Data else { throw NetworkKeychainError.unavailable(status) }
+        guard status == errSecSuccess, let data = result as? Data else { throw KeychainError.unavailable(status) }
         return String(data: data, encoding: .utf8)
     }
 
@@ -100,7 +100,7 @@ struct SecureCredentialStore {
     }
 }
 
-enum NetworkKeychainError: LocalizedError {
+enum KeychainError: LocalizedError {
     case unavailable(OSStatus)
     var errorDescription: String? { "Secure credential storage is unavailable (\(code))." }
     private var code: OSStatus { if case .unavailable(let code) = self { return code }; return -1 }

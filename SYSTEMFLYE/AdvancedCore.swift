@@ -1,18 +1,18 @@
 import Foundation
 import SwiftUI
 
-struct AdvancedAgentDefinition: Identifiable, Hashable {
+struct AgentDefinition: Identifiable, Hashable {
     let id: UUID
     var name: String
     var role: String
-    var status: AdvancedAgentStatus
+    var status: AgentStatus
     var tools: [String]
     var confidence: Double
     var lastRun: String
     var accent: Color
 }
 
-enum AdvancedAgentStatus: String, CaseIterable { case ready = "READY", running = "RUNNING", paused = "PAUSED" }
+enum AgentStatus: String, CaseIterable { case ready = "READY", running = "RUNNING", paused = "PAUSED" }
 
 struct PipelineStep: Identifiable, Hashable {
     let id = UUID()
@@ -32,10 +32,10 @@ struct QuantSignal: Identifiable { let id = UUID(); var pair: String; var direct
 @MainActor
 final class AdvancedStore: ObservableObject {
     @Published var selectedWorkspace = "Command"
-    @Published var agents: [AdvancedAgentDefinition] = [
-        AdvancedAgentDefinition(id: UUID(), name: "ORBIT", role: "Market reconnaissance", status: .ready, tools: ["Price feed", "Regime map", "Risk check"], confidence: 0.94, lastRun: "2m ago", accent: .cyan),
-        AdvancedAgentDefinition(id: UUID(), name: "MIXER", role: "Generative sound designer", status: .ready, tools: ["Synth graph", "Sample forge", "Master bus"], confidence: 0.88, lastRun: "8m ago", accent: .purple),
-        AdvancedAgentDefinition(id: UUID(), name: "SENTINEL", role: "Portfolio risk monitor", status: .paused, tools: ["Exposure", "Drawdown", "Alerts"], confidence: 0.97, lastRun: "18m ago", accent: .orange)
+    @Published var agents: [AgentDefinition] = [
+        AgentDefinition(id: UUID(), name: "ORBIT", role: "Market reconnaissance", status: .ready, tools: ["Price feed", "Regime map", "Risk check"], confidence: 0.94, lastRun: "2m ago", accent: .cyan),
+        AgentDefinition(id: UUID(), name: "MIXER", role: "Generative sound designer", status: .ready, tools: ["Synth graph", "Sample forge", "Master bus"], confidence: 0.88, lastRun: "8m ago", accent: .purple),
+        AgentDefinition(id: UUID(), name: "SENTINEL", role: "Portfolio risk monitor", status: .paused, tools: ["Exposure", "Drawdown", "Alerts"], confidence: 0.97, lastRun: "18m ago", accent: .orange)
     ]
     @Published var pipeline: [PipelineStep] = [
         PipelineStep(name: "Ingest telemetry", kind: "SOURCE", detail: "EURUSD / 1H candles", state: .complete, duration: "0.4s"),
