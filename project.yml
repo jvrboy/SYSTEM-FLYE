@@ -25,6 +25,13 @@ targets:
           - DashboardView.swift
     resources:
       - path: SYSTEMFLYE/Resources
+    preBuildScripts:
+      - name: Copy production resources into app bundle
+        basedOnDependencyAnalysis: false
+        script: |
+          set -e
+          mkdir -p "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/Resources"
+          cp -R "$SRCROOT/SYSTEMFLYE/Resources/." "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/Resources/"
     settings:
       base:
         PRODUCT_NAME: SYSTEM FLYE
